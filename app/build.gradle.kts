@@ -1,3 +1,7 @@
+import org.gradle.kotlin.dsl.create
+import org.gradle.kotlin.dsl.getByName
+import org.gradle.kotlin.dsl.release
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -17,6 +21,24 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
+
+    signingConfigs {
+        create("release") {
+            // Diese Werte holt sich Gradle aus den Umgebungsvariablen der GitHub Action
+            storeFile = file("keystore.jks") // Platzhalter, wir schreiben die Datei im Workflow
+            storePassword = System.getenv("KEY_STORE_PASSWORD")
+            keyAlias = System.getenv("ALIAS")
+            keyPassword = System.getenv("KEY_PASSWORD")
+        }
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("release")
+        }
+    }
+
 
     buildTypes {
         release {
