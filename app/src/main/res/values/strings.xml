@@ -1,0 +1,28 @@
+<resources>
+    <string name="app_name" translatable="false">Screenity</string>
+    <string name="Today">Heute</string>
+    <string name="Devices">Geräte</string>
+    <string name="Settings">Einstellungen</string>
+    <string name="welcome">Willkommen</string>
+    <string name="pls_enter_url">Bitte gib die Server-URL ein, um zu starten.</string>
+    <string name="local_usagetime">Lokale Nutzungszeit</string>
+    <string name="refresh">Aktualisieren</string>
+    <string name="no_data_permission">Keine Daten gefunden. Hast du die Berechtigung erteilt?</string>
+    <string name="open_settings">Einstellungen öffnen!</string>
+    <string name="Local">Lokal</string>
+    <string name="all_time">Gesamte Bildschirmzeit</string>
+    <string name="ex_server_url">Server URL (z.B. http://192.168.178.50:5000)</string>
+    <string name="connect_and_start">Verbinden und Starten</string>
+    <string name="devices_overview">Geräteübersicht</string>
+    <string name="all_devices_together">Alle Geräte kombiniert</string>
+    <string name="this_device">Dieses Gerät</string>
+    <string name="sent">Gesendet</string>
+    <string name="error">Fehler</string>
+    <string name="upload_data">Daten hochladen</string>
+    <string name="server_url">Server URL</string>
+    <string name="save_and_try">Speichern und testen</string>
+    <string name="connection_successful">Verbindung erfolgreich!</string>
+    <string name="server_not_reachable">Server nicht erreichbar</string>
+    <string name="server_response">Server antwortet mit Code:</string>
+    <string name="unknown_network_error">Unbekannter Netzwerkfehler</string>
+</resources>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="Today">Aujourd’hui</string>
+    <string name="Devices">Appareils</string>
+    <string name="Settings">Paramètres</string>
+    <string name="welcome">Bienvenue</string>
+    <string name="pls_enter_url">Veuillez saisir l’URL du serveur pour démarrer</string>
+    <string name="local_usagetime">Temps locale de utiliser</string>
+    <string name="refresh">Acutaliser</string>
+    <string name="no_data_permission">Grrrr les francais!!!</string>
+    <string name="open_settings">Ouvrir les parametrès!</string>
+    <string name="Local">Locale</string>
+    <string name="all_time">Tout les temps</string>
+    <string name="ex_server_url">L\'URL du serveur (p. e. http://192.168.178.50:5000)</string>
+    <string name="connect_and_start">Connecter et parir</string>
+    <string name="devices_overview">\?</string>
+    <string name="all_devices_together">\?</string>
+    <string name="this_device">Ce appareil</string>
+    <string name="sent">\?</string>
+    <string name="error">\?</string>
+    <string name="upload_data">\?</string>
+    <string name="server_url">L\'URL du serveur</string>
+    <string name="save_and_try">Saver et essayer</string>
+    <string name="connection_successful">\?</string>
+    <string name="server_not_reachable">\?</string>
+    <string name="server_response">Codé:</string>
+    <string name="unknown_network_error">\?</string>
+</resources>
