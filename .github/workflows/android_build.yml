@@ -22,20 +22,18 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
+      - name: Keystore Datei aus Secret erstellen
+        run: echo "${{ secrets.SIGNING_KEY }}" | base64 -d > app/keystore.jks
+
       - name: Berechtigung für Gradle setzen
         run: chmod +x gradlew
-
-      - name: Keystore Datei aus Secret erstellen
-        run: |
-          echo "${{ secrets.SIGNING_KEY }}" | base64 -d > app/keystore.jks
 
       - name: APK bauen (Signed Release)
         run: ./gradlew assembleRelease
         env:
           APP_VERSION: ${{ github.ref_name }}
-          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
-          ALIAS: ${{ secrets.ALIAS }}
           KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          ALIAS: ${{ secrets.ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
       - name: Release erstellen und APK hochladen
@@ -44,5 +42,7 @@ jobs:
         with:
           files: app/build/outputs/apk/release/*.apk
           name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
