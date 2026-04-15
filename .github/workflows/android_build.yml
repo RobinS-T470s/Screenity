@@ -25,6 +25,10 @@ jobs:
       - name: Berechtigung für Gradle setzen
         run: chmod +x gradlew
 
+      - name: Keystore Datei aus Secret erstellen
+        run: |
+          echo "${{ secrets.SIGNING_KEY }}" | base64 -d > app/keystore.jks
+
       - name: APK bauen (Signed Release)
         run: ./gradlew assembleRelease
         env:
