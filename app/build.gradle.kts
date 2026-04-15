@@ -16,16 +16,17 @@ android {
         applicationId = "de.schanbro.screenity"
         minSdk = 29
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+
+        val gitVersion = System.getenv("APP_VERSION") ?: "0.0.1-local"
+        versionName = gitVersion.removePrefix("v")
+        versionCode = (System.currentTimeMillis() / 600000).toInt()
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     signingConfigs {
         create("release") {
-            // Diese Werte holt sich Gradle aus den Umgebungsvariablen der GitHub Action
-            storeFile = file("keystore.jks") // Platzhalter, wir schreiben die Datei im Workflow
+            storeFile = file("keystore.jks")
             storePassword = System.getenv("KEY_STORE_PASSWORD")
             keyAlias = System.getenv("ALIAS")
             keyPassword = System.getenv("KEY_PASSWORD")
@@ -35,20 +36,15 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
+            // Hier kommt alles in EINEN Block:
             signingConfig = signingConfigs.getByName("release")
-        }
-    }
-
-
-    buildTypes {
-        release {
-            isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -58,6 +54,14 @@ android {
     }
     buildFeatures {
         compose = true
+    }
+
+    // Optional: Damit die Datei auf GitHub auch den richtigen Namen hat
+    applicationVariants.all {
+        outputs.all {
+            val output = this as com.android.build.gradle.internal.api.ApkVariantOutputImpl
+            output.outputFileName = "Screenity-${versionName}.apk"
+        }
     }
 }
 
