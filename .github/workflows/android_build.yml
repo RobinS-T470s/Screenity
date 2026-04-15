@@ -25,16 +25,20 @@ jobs:
       - name: Berechtigung für Gradle setzen
         run: chmod +x gradlew
 
-      - name: APK bauen (Debug Version)
-        run: ./gradlew assembleDebug
+      - name: APK bauen (Signed Release)
+        run: ./gradlew assembleRelease
+        env:
+          APP_VERSION: ${{ github.ref_name }}
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          ALIAS: ${{ secrets.ALIAS }}
+          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
       - name: Release erstellen und APK hochladen
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: app/build/outputs/apk/debug/*.apk
+          files: app/build/outputs/apk/release/*.apk
           name: Release ${{ github.ref_name }}
-          draft: false
-          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
