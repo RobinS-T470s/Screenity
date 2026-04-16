@@ -1,4 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Screenity</string>
+    <string name="Today">\?</string>
+    <string name="server_response">\?</string>
+    <string name="unknown_network_error">\?</string>
+    <string name="Devices">\?</string>
+    <string name="Settings">\?</string>
+    <string name="welcome">\?</string>
+    <string name="pls_enter_url">\?</string>
+    <string name="local_usagetime">\?</string>
+    <string name="all_time">\?</string>
+    <string name="ex_server_url">\?</string>
+    <string name="refresh">\?</string>
+    <string name="no_data_permission">\?</string>
+    <string name="open_settings">\?</string>
+    <string name="Local">\?</string>
+    <string name="connect_and_start">\?</string>
+    <string name="devices_overview">\?</string>
+    <string name="all_devices_together">\?</string>
+    <string name="this_device">\?</string>
+    <string name="sent">\?</string>
+    <string name="error">\?</string>
+    <string name="upload_data">\?</string>
+    <string name="server_url">\?</string>
+    <string name="save_and_try">\?</string>
+    <string name="connection_successful">\?</string>
+    <string name="server_not_reachable">\?</string>
 </resources>
