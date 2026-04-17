@@ -233,6 +233,9 @@ fun SetupScreen(onUrlSaved: (String) -> Unit) {
             modifier = Modifier.fillMaxWidth(),
             placeholder = { Text("http://...") }
         )
+        Text(
+            text = "Bitte Port immer angeben (auch 443/80)"
+        )
 
         Spacer(Modifier.height(16.dp))
 
