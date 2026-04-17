@@ -1,5 +1,6 @@
 # Screenity
-## by Robin Schanbacher (robin@schanbros.de)
+by Robin Schanbacher (robin@schanbros.de)
+![App-Icon](images/icon.png)
 
 # What does it do?
 If you install Screenity on all your devices (currently just android possible), it shows you all your screentime  – from all devices.
