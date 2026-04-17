@@ -3,39 +3,39 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-  <group android:scaleX="0.79518074"
-      android:scaleY="0.79518074"
-      android:translateX="10.662651"
-      android:translateY="11.060241">
+  <group android:scaleX="0.75"
+      android:scaleY="0.75"
+      android:translateX="13.5"
+      android:translateY="13.5">
 
     <group
         android:translateX="54"
         android:translateY="54">
 
       <path
-          android:pathData="M-20,0 C-20,-25 20,-25 20,0 L20,15"
+          android:pathData="M-28,8 L-28,-4 C-28,-22 0,-22 0,-4 L0,18"
           android:strokeColor="#FFFFFF"
-          android:strokeWidth="12"
+          android:strokeWidth="11"
           android:strokeLineCap="round"
           android:fillColor="#00000000" />
 
       <path
-          android:pathData="M20,0 C20,25 -20,25 -20,0 L-20,-15"
+          android:pathData="M28,-8 L28,4 C28,22 0,22 0,4 L0,-18"
           android:strokeColor="#FFFFFF"
-          android:strokeWidth="12"
+          android:strokeWidth="11"
           android:strokeLineCap="round"
           android:fillColor="#00000000" />
 
       <path
-          android:pathData="M-20,-15 L-35,-15"
+          android:pathData="M-28,-4 L-38,-4"
           android:strokeColor="#FFFFFF"
-          android:strokeWidth="12"
+          android:strokeWidth="11"
           android:strokeLineCap="round" />
 
       <path
-          android:pathData="M20,15 L35,15"
+          android:pathData="M28,4 L38,4"
           android:strokeColor="#FFFFFF"
-          android:strokeWidth="12"
+          android:strokeWidth="11"
           android:strokeLineCap="round" />
     </group>
   </group>
