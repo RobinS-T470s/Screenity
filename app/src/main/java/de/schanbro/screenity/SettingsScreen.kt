@@ -106,6 +106,8 @@ fun SettingsScreen() {
 
         ConnectionStatusWidget(state = status)
     }
+    Spacer(Modifier.height(24.dp))
+    Text(text = "Screenity by Robin Schanbacher")
 }
 
 @Composable

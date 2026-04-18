@@ -201,6 +201,19 @@ fun DeviceDetailScreen(deviceId: String, onBack: () -> Unit) {
                 }
             }
         }
+        val hourlyData = remember(detailedEvents) { calculateHourlyUsage(detailedEvents) }
+
+        Text("Nutzung über den Tag", style = MaterialTheme.typography.titleMedium)
+
+        Card(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+        ) {
+            ScreenTimeChart(
+                dataPoints = hourlyData,
+                modifier = Modifier.padding(16.dp)
+            )
+        }
     }
     // --- DELETE CONFIRMATION DIALOG ---
     if (showDeleteDialog) {

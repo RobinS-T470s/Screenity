@@ -32,7 +32,8 @@ suspend fun sendDataToServer(
         "device_name" to android.os.Build.MODEL,
         "report_date" to SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date()),
         "total_screen_time_ms" to totalMs,
-        "apps" to usageList.map { mapOf("app_name" to it.appName, "usage_ms" to it.usageMs) }
+        "apps" to usageList.map { mapOf("app_name" to it.appName, "usage_ms" to it.usageMs) },
+        "detailedEvents" to detailedEvents
     )
     try {
         val body = Gson().toJson(reportData).toRequestBody("application/json".toMediaType())

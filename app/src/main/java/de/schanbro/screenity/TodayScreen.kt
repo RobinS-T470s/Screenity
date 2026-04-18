@@ -9,6 +9,8 @@ import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Refresh
@@ -77,6 +79,46 @@ fun TodayScreen() {
             summary?.let {
                 // Nutzt die bereits definierte Card für die große Anzeige
                 TotalAllDevicesCard(it.today_total_all_devices_ms)
+            }
+        }
+        summary?.let { s ->
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                TotalAllDevicesCard(s.today_total_all_devices_ms)
+
+                Text(
+                    text = "Nutzung letzte Tage",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(16.dp)
+                )
+
+                // Daten für das Diagramm vorbereiten
+                val chartData = remember(s) {
+                    // Wir sammeln alle Reports aller Geräte
+                    val dailyTotals = mutableMapOf<String, Long>()
+                    s.devices.forEach { device ->
+                        device.reports?.forEach { (date, report) ->
+                            dailyTotals[date] = (dailyTotals[date] ?: 0L) + report.total_screen_time_ms
+                        }
+                    }
+                    // Sortieren nach Datum und die letzten 7 Tage nehmen
+                    dailyTotals.toList()
+                        .sortedBy { it.first }
+                        .takeLast(7)
+                }
+
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    if (chartData.isNotEmpty()) {
+                        ScreenTimeChart(
+                            dataPoints = chartData,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    } else {
+                        Text("Keine Verlaufsdaten vorhanden", Modifier.padding(16.dp))
+                    }
+                }
             }
         }
     }

@@ -44,3 +44,33 @@ fun getDetailedEvents(context: Context): List<ScreenEvent> {
     }
     return eventList
 }
+
+fun calculateHourlyUsage(events: List<ScreenEvent>): List<Pair<String, Long>> {
+    val hourlyMap = MutableList(24) { 0L } // 0 bis 23 Uhr
+    val sortedEvents = events.sortedBy { it.timestamp }
+
+    var lastScreenOnTime: Long? = null
+
+    for (event in sortedEvents) {
+        when (event.type) {
+            "SCREEN_ON" -> lastScreenOnTime = event.timestamp
+            "SCREEN_OFF" -> {
+                lastScreenOnTime?.let { onTime ->
+                    val offTime = event.timestamp
+                    val duration = offTime - onTime
+
+                    // Bestimmen, in welche Stunde das fällt (vereinfacht)
+                    val hour = Calendar.getInstance().apply { timeInMillis = onTime }.get(Calendar.HOUR_OF_DAY)
+                    if (hour in 0..23) {
+                        hourlyMap[hour] += duration
+                    }
+                }
+                lastScreenOnTime = null
+            }
+        }
+    }
+
+    return hourlyMap.mapIndexed { index, ms ->
+        String.format("%02d:00", index) to ms
+    }
+}
