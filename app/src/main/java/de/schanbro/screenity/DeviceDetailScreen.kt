@@ -27,6 +27,7 @@ import okhttp3.Request
 import java.text.SimpleDateFormat
 import java.util.*
 
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DeviceDetailScreen(deviceId: String, onBack: () -> Unit) {
