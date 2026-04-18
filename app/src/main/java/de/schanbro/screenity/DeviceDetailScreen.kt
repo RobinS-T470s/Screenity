@@ -203,19 +203,19 @@ fun DeviceDetailScreen(deviceId: String, onBack: () -> Unit) {
                     }
                 }
             }
-        }
-        val hourlyData = remember(eventsFromToday) { calculateHourlyUsage(eventsFromToday) }
+            val hourlyData = remember(eventsFromToday) { calculateHourlyUsage(eventsFromToday) }
 
-        Text("Nutzung über den Tag", style = MaterialTheme.typography.titleMedium)
+            Text("Nutzung über den Tag", style = MaterialTheme.typography.titleMedium)
 
-        Card(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
-        ) {
-            ScreenTimeChart(
-                dataPoints = hourlyData,
-                modifier = Modifier.padding(16.dp)
-            )
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+            ) {
+                ScreenTimeChart(
+                    dataPoints = hourlyData,
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
         }
     }
     // --- DELETE CONFIRMATION DIALOG ---
@@ -296,15 +296,4 @@ fun AppUsageRow(app: AppUsageDetail) {
             fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
         )
     }
-}
-
-// Erstelle eine extra Funktion ohne Parameter für die Vorschau
-@Preview(showBackground = true, name = "Geräte Details Vorschau")
-@Composable
-fun DeviceDetailPreview() {
-    // Hier rufst du deinen Screen mit Test-Daten auf
-    DeviceDetailScreen(
-        deviceId = "d1be2cb6cbd8ef59",
-        onBack = { /* Macht in der Preview nichts */ }
-    )
 }
