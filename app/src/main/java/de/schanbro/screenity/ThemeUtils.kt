@@ -24,14 +24,21 @@ fun ScreenWrapper(
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Top
+            verticalAlignment = Alignment.CenterVertically // Besser zentriert
         ) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f), // NIMMT RESTLICHEN PLATZ EIN
+                maxLines = 1, // Optional: Verhindert zweite Zeile
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis // Macht "..."
             )
-            headerAction?.invoke()
+
+            // Die Icons in eine eigene Row packen, damit sie beieinander bleiben
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                headerAction?.invoke()
+            }
         }
 
         Spacer(Modifier.height(16.dp))

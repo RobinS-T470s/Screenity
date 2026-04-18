@@ -1,11 +1,15 @@
 package de.schanbro.screenity
 
+import androidx.compose.ui.tooling.preview.Preview
+
 import android.content.Context
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,6 +21,7 @@ import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.text.SimpleDateFormat
@@ -34,7 +39,58 @@ fun DeviceDetailScreen(deviceId: String, onBack: () -> Unit) {
     var appsFromToday by remember { mutableStateOf<List<AppUsageDetail>>(emptyList()) }
     var deviceName by remember { mutableStateOf("Gerät") }
 
+    // Dialog-Steuerung
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var showEditDialog by remember { mutableStateOf(false) }
+    var editNameText by remember { mutableStateOf(deviceName) }
+
+    // Hilfs-Variable für UI-Feedback
+    var isProcessing by remember { mutableStateOf(false) }
+
     val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+
+    fun deleteDevice() {
+        scope.launch {
+            isProcessing = true
+            try {
+                val client = OkHttpClient()
+                val url = "${serverUrl.trim().removeSuffix("/")}/device/$deviceId"
+                val request = Request.Builder().url(url).delete().build()
+
+                val response = withContext(Dispatchers.IO) { client.newCall(request).execute() }
+                if (response.isSuccessful) {
+                    onBack() // Nach dem Löschen zurück zur Liste
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("SCREENITY", "Löschfehler: ${e.message}")
+            }
+            isProcessing = false
+        }
+    }
+
+    fun updateDeviceName(newName: String) {
+        scope.launch {
+            isProcessing = true
+            try {
+                val client = OkHttpClient()
+                val url = "${serverUrl.trim().removeSuffix("/")}/device/$deviceId"
+
+                // JSON Body erstellen
+                val json = Gson().toJson(mapOf("device_name" to newName))
+                val body = okhttp3.RequestBody.create("application/json".toMediaTypeOrNull(), json)
+                val request = Request.Builder().url(url).put(body).build()
+
+                val response = withContext(Dispatchers.IO) { client.newCall(request).execute() }
+                if (response.isSuccessful) {
+                    deviceName = newName // UI lokal aktualisieren
+                    showEditDialog = false
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("SCREENITY", "Updatefehler: ${e.message}")
+            }
+            isProcessing = false
+        }
+    }
 
     fun fetch() {
         android.util.Log.d("SCREENITY_CHECK", "1. fetch() gestartet für ID: $deviceId")
@@ -98,7 +154,19 @@ fun DeviceDetailScreen(deviceId: String, onBack: () -> Unit) {
     ScreenWrapper(
         title = "Details: $deviceName",
         headerAction = {
-            IconButton(onClick = { fetch() }) {
+            // Löschen Button
+            IconButton(onClick = { showDeleteDialog = true }) {
+                Icon(Icons.Default.Remove, contentDescription = "Löschen", tint = MaterialTheme.colorScheme.error)
+            }
+            // Bearbeiten Button
+            IconButton(onClick = {
+                editNameText = deviceName // Aktuellen Namen ins Feld laden
+                showEditDialog = true
+            }) {
+                Icon(Icons.Default.Edit, contentDescription = "Bearbeiten")
+            }
+            // Aktualisieren Button
+            IconButton(onClick = { fetch() }, enabled = !isLoading) {
                 Icon(Icons.Default.Refresh, contentDescription = "Aktualisieren")
             }
         }
@@ -134,6 +202,57 @@ fun DeviceDetailScreen(deviceId: String, onBack: () -> Unit) {
             }
         }
     }
+    // --- DELETE CONFIRMATION DIALOG ---
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Gerät löschen?") },
+            text = { Text("Möchtest du '$deviceName' und alle zugehörigen Daten wirklich unwiderruflich löschen?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                        deleteDevice()
+                    },
+                    enabled = !isProcessing, // Button deaktivieren wenn aktiv
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    if (isProcessing) CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                    else Text("Löschen")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) { Text("Abbrechen") }
+            }
+        )
+    }
+
+// --- EDIT NAME DIALOG ---
+    if (showEditDialog) {
+        AlertDialog(
+            onDismissRequest = { showEditDialog = false },
+            title = { Text("Name bearbeiten") },
+            text = {
+                TextField(
+                    value = editNameText,
+                    onValueChange = { editNameText = it },
+                    label = { Text("Gerätename") },
+                    singleLine = true
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = { updateDeviceName(editNameText) },
+                    enabled = !isProcessing && editNameText.isNotBlank() // Verhindert leere Namen
+                ) {
+                    Text("Speichern")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditDialog = false }) { Text("Abbrechen") }
+            }
+        )
+    }
 }
 
 @Composable
@@ -161,4 +280,15 @@ fun AppUsageRow(app: AppUsageDetail) {
             fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
         )
     }
+}
+
+// Erstelle eine extra Funktion ohne Parameter für die Vorschau
+@Preview(showBackground = true, name = "Geräte Details Vorschau")
+@Composable
+fun DeviceDetailPreview() {
+    // Hier rufst du deinen Screen mit Test-Daten auf
+    DeviceDetailScreen(
+        deviceId = "d1be2cb6cbd8ef59",
+        onBack = { /* Macht in der Preview nichts */ }
+    )
 }
