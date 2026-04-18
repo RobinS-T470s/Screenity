@@ -33,23 +33,6 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import java.text.SimpleDateFormat
 import java.util.*
 
-data class DeviceSummary(
-    val device_id: String,
-    val device_name: String,
-    val total_screen_time_hours: Double,
-    val today_ms: Long,
-    val reports: Map<String, DayReport>? // Wichtig: Hier müssen die Reports drin sein!
-)
-
-data class DayReport(
-    @SerializedName("total_screen_time_ms") val totalMs: Long,
-    val apps: List<AppUsageDetail>? = null
-)
-
-data class AppUsageDetail(
-    @SerializedName("app_name") val app_name: String,
-    @SerializedName("usage_ms") val usage_ms: Long
-)
 
 @Composable
 fun DevicesScreen(onNavigateToDetail: (String) -> Unit) {

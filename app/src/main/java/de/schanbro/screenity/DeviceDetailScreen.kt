@@ -37,6 +37,7 @@ fun DeviceDetailScreen(deviceId: String, onBack: () -> Unit) {
 
     var isLoading by remember { mutableStateOf(true) }
     var appsFromToday by remember { mutableStateOf<List<AppUsageDetail>>(emptyList()) }
+    var eventsFromToday by remember { mutableStateOf<List<ScreenEvent>>(emptyList()) } // NEU
     var deviceName by remember { mutableStateOf("Gerät") }
 
     // Dialog-Steuerung
@@ -125,7 +126,8 @@ fun DeviceDetailScreen(deviceId: String, onBack: () -> Unit) {
                                 val report = device.reports?.get(todayStr)
                                 if (report != null) {
                                     appsFromToday = report.apps ?: emptyList()
-                                    android.util.Log.d("SCREENITY_CHECK", "4. Apps für heute gefunden: ${appsFromToday.size}")
+                                    eventsFromToday = report.detailed_events ?: emptyList() // NEU: Events speichern
+                                    android.util.Log.d("SCREENITY_CHECK", "4. Apps/Events gefunden")
                                 } else {
                                     android.util.Log.w("SCREENITY_CHECK", "Hinweis: Kein Report für $todayStr vorhanden.")
                                     // Debug: Zeige welche Tage da sind
@@ -201,7 +203,7 @@ fun DeviceDetailScreen(deviceId: String, onBack: () -> Unit) {
                 }
             }
         }
-        val hourlyData = remember(detailedEvents) { calculateHourlyUsage(detailedEvents) }
+        val hourlyData = remember(eventsFromToday) { calculateHourlyUsage(eventsFromToday) }
 
         Text("Nutzung über den Tag", style = MaterialTheme.typography.titleMedium)
 

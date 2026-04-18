@@ -33,11 +33,6 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import java.text.SimpleDateFormat
 import java.util.*
 
-data class ServerSummary(
-    val devices: List<DeviceSummary>,
-    val total_all_devices_hours: Double,
-    val today_total_all_devices_ms: Long
-)
 
 @Composable
 fun TodayScreen() {
