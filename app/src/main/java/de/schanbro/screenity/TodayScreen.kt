@@ -40,6 +40,8 @@ fun TodayScreen() {
     val scope = rememberCoroutineScope()
     val prefs = remember { context.getSharedPreferences("ScreenityPrefs", Context.MODE_PRIVATE) }
     val serverUrl = prefs.getString("server_url", "") ?: ""
+    val userID = prefs.getString("userid", "") ?: ""
+    val password = prefs.getString("password", "") ?: ""
 
     var summary by remember { mutableStateOf<ServerSummary?>(null) }
     var isLoading by remember { mutableStateOf(false) }
@@ -49,7 +51,7 @@ fun TodayScreen() {
         scope.launch {
             isLoading = true
             try {
-                summary = getSummaryFromServer(serverUrl)
+                summary = getSummaryFromServer(serverUrl, userID, password)
             } catch (e: Exception) {
             }
             isLoading = false

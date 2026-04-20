@@ -27,6 +27,8 @@ class ScreentimeWidget : GlanceAppWidget() {
         // 1. Welche Geräte hat der Nutzer in der Config gewählt?
         val selectedDevices = prefs.getStringSet("widget_${appWidgetId}_devices", emptySet()) ?: emptySet()
         val serverUrl = prefs.getString("server_url", "") ?: ""
+        val userID = prefs.getString("userid", "") ?: ""
+        val password = prefs.getString("password", "") ?: ""
 
         var totalMs = 0L
 
@@ -34,7 +36,7 @@ class ScreentimeWidget : GlanceAppWidget() {
         if (serverUrl.isNotBlank()) {
             try {
                 val result = withContext(Dispatchers.IO) {
-                    getSummaryFromServer(serverUrl)
+                    getSummaryFromServer(serverUrl, userID, password)
                 }
 
                 // HIER IST DIE KORREKTUR: Wir greifen erst auf .devices zu!
