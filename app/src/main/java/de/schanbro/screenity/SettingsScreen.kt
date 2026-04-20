@@ -1,16 +1,25 @@
 package de.schanbro.screenity
 
+//import de.schanbro.screenity.BuildConfig
+
 import android.content.Context
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.schanbro.screenity.ui.theme.SuccessGreen
 import kotlinx.coroutines.launch
@@ -25,12 +34,17 @@ sealed class ConnectionState {
 }
 
 @Composable
+@Preview
 fun SettingsScreen() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val prefs = remember { context.getSharedPreferences("ScreenityPrefs", Context.MODE_PRIVATE) }
 
     var urlInput by remember { mutableStateOf(prefs.getString("server_url", "") ?: "") }
+    var userID by remember { mutableStateOf(prefs.getString("userid", "") ?: "")}
+    var password by remember { mutableStateOf(prefs.getString("password", "") ?: "") }
+
+    var passwordVisible by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf<ConnectionState>(ConnectionState.Idle) }
 
     // Intervall auslesen (Standard: 15 Minuten)
@@ -43,6 +57,33 @@ fun SettingsScreen() {
             onValueChange = { urlInput = it; status = ConnectionState.Idle },
             label = { Text(stringResource(R.string.server_url)) },
             modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(Modifier.height(8.dp))
+
+        // --- USER ID ---
+        OutlinedTextField(
+            value = userID,
+            onValueChange = { userID = it; status = ConnectionState.Idle },
+            label = { Text("UserID") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        // --- PASSWORT ---
+        OutlinedTextField(
+            value = password,
+            onValueChange = { password = it; status = ConnectionState.Idle },
+            label = { Text("Passwort") },
+            modifier = Modifier.fillMaxWidth(),
+            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            trailingIcon = {
+                val image = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
+                IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                    Icon(imageVector = image, contentDescription = "Passwort Sichtbarkeit")
+                }
+            }
         )
 
         Spacer(Modifier.height(24.dp))
@@ -103,7 +144,8 @@ fun SettingsScreen() {
         }
 
         Spacer(Modifier.height(24.dp))
-        Text(text = "Screenity by Robin Schanbacher")
+        val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+        Text(text = "Screenity (${packageInfo.versionName})by Robin Schanbacher")
 
         Spacer(Modifier.height(24.dp))
 

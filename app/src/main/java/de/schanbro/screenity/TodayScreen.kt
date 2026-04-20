@@ -73,7 +73,7 @@ fun TodayScreen() {
         } else {
             summary?.let {
                 // Nutzt die bereits definierte Card für die große Anzeige
-                TotalAllDevicesCard(it.today_total_all_devices_ms)
+                // TotalAllDevicesCard(it.today_total_all_devices_ms)
             }
         }
         summary?.let { s ->

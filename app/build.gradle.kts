@@ -54,6 +54,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     // Optional: Damit die Datei auf GitHub auch den richtigen Namen hat
