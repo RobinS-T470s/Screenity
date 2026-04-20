@@ -122,6 +122,8 @@ fun SettingsScreen() {
                 prefs.edit()
                     .putString("server_url", urlInput)
                     .putInt("upload_interval_mins", selectedInterval)
+                    .putString("userid", userID)
+                    .putString("password", password)
                     .apply()
 
                 // 2. WorkManager mit neuem Intervall updaten!
@@ -130,7 +132,7 @@ fun SettingsScreen() {
                 scope.launch {
                     status = ConnectionState.Loading
                     try {
-                        getSummaryFromServer(urlInput)
+                        getSummaryFromServer(urlInput, userID, password)
                         status = ConnectionState.Success
                     } catch (e: Exception) {
                         val detail = e.localizedMessage ?: errorMessage
@@ -145,7 +147,8 @@ fun SettingsScreen() {
 
         Spacer(Modifier.height(24.dp))
         val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
-        Text(text = "Screenity (${packageInfo.versionName})by Robin Schanbacher")
+        Text(text = "Screenity by Robin Schanbacher")
+        Text(text = "${packageInfo.versionName}")
 
         Spacer(Modifier.height(24.dp))
 

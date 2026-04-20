@@ -42,10 +42,30 @@ suspend fun sendDataToServer(
     } catch (e: Exception) { false }
 }
 
-suspend fun getSummaryFromServer(url: String): ServerSummary = withContext(Dispatchers.IO) {
-    val client = OkHttpClient()
-    val request = Request.Builder().url("${url.trim().removeSuffix("/")}/summary").build()
-    val response = client.newCall(request).execute()
-    if (!response.isSuccessful) throw Exception("Code: ${response.code}")
-    Gson().fromJson(response.body?.string(), ServerSummary::class.java)
+val okHttpClient = OkHttpClient()
+
+suspend fun getSummaryFromServer(
+    url: String,
+    userID: String,
+    password: String
+): ServerSummary = withContext(Dispatchers.IO) {
+
+    // Credentials für Basic Auth (falls benötigt)
+    val credential = Credentials.basic(userID, password)
+
+    val request = Request.Builder()
+        .url("${url.trim().removeSuffix("/")}/summary")
+        .header("Authorization", credential) // Authentifizierung hinzufügen
+        .build()
+
+    // execute() in einem try-with-resources ähnlichen Block (use)
+    okHttpClient.newCall(request).execute().use { response ->
+        if (!response.isSuccessful) throw Exception("Server Fehler: ${response.code}")
+
+        val body = response.body?.charStream()
+            ?: throw Exception("Response Body ist leer")
+
+        // Direkt vom Stream lesen statt erst alles in einen String zu laden
+        Gson().fromJson(body, ServerSummary::class.java)
+    }
 }

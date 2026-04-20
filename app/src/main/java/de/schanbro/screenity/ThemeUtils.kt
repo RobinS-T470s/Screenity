@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -214,6 +215,9 @@ fun ScreenTimeChart(
 
     val maxUsage = dataPoints.maxOfOrNull { it.second }?.coerceAtLeast(1L) ?: 1L
     val scrollState = rememberScrollState()
+    LaunchedEffect(dataPoints) {
+        scrollState.animateScrollTo(scrollState.maxValue)
+    }
     val segmentWidth = 70.dp
     val totalWidth = segmentWidth * dataPoints.size
 
