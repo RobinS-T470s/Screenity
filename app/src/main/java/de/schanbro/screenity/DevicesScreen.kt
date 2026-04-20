@@ -40,6 +40,8 @@ fun DevicesScreen(onNavigateToDetail: (String) -> Unit) {
     val scope = rememberCoroutineScope()
     val prefs = remember { context.getSharedPreferences("ScreenityPrefs", Context.MODE_PRIVATE) }
     val serverUrl = prefs.getString("server_url", "") ?: ""
+    val userID = prefs.getString("userid", "") ?: ""
+    val password = prefs.getString("password", "") ?: ""
 
     var devicesList by remember { mutableStateOf(emptyList<DeviceSummary>()) }
     var isLoading by remember { mutableStateOf(false) }
@@ -49,7 +51,7 @@ fun DevicesScreen(onNavigateToDetail: (String) -> Unit) {
         scope.launch {
             isLoading = true
             try {
-                val result = getSummaryFromServer(serverUrl)
+                val result = getSummaryFromServer(serverUrl, userID, password)
                 // Hier greifen wir auf die Liste der Geräte zu:
                 val fetchedDevices = result.devices
                 devicesList = fetchedDevices
