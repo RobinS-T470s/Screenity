@@ -188,31 +188,70 @@ fun DeviceDetailScreen(deviceId: String, onBack: () -> Unit) {
                 CircularProgressIndicator()
             }
         } else {
-            Column(Modifier.fillMaxSize()) {
-                Text(
-                    text = "App-Nutzung heute ($todayStr):",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
+            val hourlyData = remember(eventsFromToday) { calculateHourlyUsage(eventsFromToday) }
+            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                item {
+                    Text(
+                        "Nutzung über den Tag",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
 
-                if (appsFromToday.isEmpty()) {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("Keine detaillierten Daten für heute gefunden.", style = MaterialTheme.typography.bodyMedium)
-                    }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(bottom = 24.dp)
-                    ) {
-                        items(appsFromToday.sortedByDescending { it.usage_ms }) { app ->
-                            AppUsageRow(app)
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp)
+                    if (hourlyData.isNotEmpty()) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                        ) {
+                            // Hier wird das Diagramm aus deiner Charts.kt aufgerufen
+                            ScreenTimeChart(
+                                dataPoints = hourlyData,
+                                modifier = Modifier.padding(16.dp)
+                            )
                         }
+                    } else {
+                        Text("Keine Verlaufsdaten vorhanden.", modifier = Modifier.padding(bottom = 24.dp))
                     }
                 }
+
+                item {
+                    Text(
+                        text = "App-Nutzung heute ($todayStr):",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                }
+
+                if (appsFromToday.isEmpty()) {
+                    item {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text(
+                                "Keine detaillierten Daten für heute gefunden.",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+                } else {
+                    //LazyColumn(
+                    //    modifier = Modifier.fillMaxSize(),
+                    //    contentPadding = PaddingValues(bottom = 24.dp)
+                    //) {
+                    //    items(appsFromToday.sortedByDescending { it.usage_ms }) { app ->
+                    //        AppUsageRow(app)
+                    //        HorizontalDivider(
+                    //            modifier = Modifier.padding(vertical = 4.dp),
+                    //            thickness = 0.5.dp
+                    //        )
+                    //    }
+                    //}
+                    items(appsFromToday.sortedByDescending { it.usage_ms }) { app ->
+                        AppUsageRow(app)
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp)
+                    }
+                    item { Spacer(Modifier.height(32.dp)) }
+                }
             }
-            val hourlyData = remember(eventsFromToday) { calculateHourlyUsage(eventsFromToday) }
 
             Text("Nutzung über den Tag", style = MaterialTheme.typography.titleMedium)
 
