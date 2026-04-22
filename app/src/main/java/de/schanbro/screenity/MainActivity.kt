@@ -69,6 +69,7 @@ sealed class Screen(val route: String) {
     object Devices : Screen("devices_screen")
     object Settings : Screen("settings_screen")
     object DeviceDetail : Screen("device_detail/{deviceId}")
+    object About : Screen("about_screen")
 }
 
 class MainActivity : ComponentActivity() {
@@ -195,7 +196,9 @@ class MainActivity : ComponentActivity() {
                                 })
                             }
                             composable(de.schanbro.screenity.Screen.Settings.route) {
-                                SettingsScreen()
+                                SettingsScreen(
+                                    onNavigateToVersion = { navController.navigate(Screen.About.route) }
+                                )
                             }
                             composable(Screen.DeviceDetail.route) { backStackEntry ->
                                 val deviceId = backStackEntry.arguments?.getString("deviceId") ?: ""
@@ -203,6 +206,9 @@ class MainActivity : ComponentActivity() {
                                     deviceId = deviceId,
                                     onBack = { navController.popBackStack() } // Geht zurück zum TodayScreen
                                 )
+                            }
+                            composable ( de.schanbro.screenity.Screen.About.route ) {
+                                AboutScreen(onBack = { navController.popBackStack() })
                             }
                         }
                     }

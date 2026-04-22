@@ -3,6 +3,7 @@ package de.schanbro.screenity
 //import de.schanbro.screenity.BuildConfig
 
 import android.content.Context
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -19,8 +20,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import de.schanbro.screenity.ui.theme.SuccessGreen
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -34,8 +37,7 @@ sealed class ConnectionState {
 }
 
 @Composable
-@Preview
-fun SettingsScreen() {
+fun SettingsScreen(onNavigateToVersion: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val prefs = remember { context.getSharedPreferences("ScreenityPrefs", Context.MODE_PRIVATE) }
@@ -149,6 +151,18 @@ fun SettingsScreen() {
         val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
         Text(text = "Screenity by Robin Schanbacher")
         Text(text = "${packageInfo.versionName}")
+        Text(
+            text = "v${packageInfo.versionName}}",
+            modifier = Modifier
+                .fillMaxWidth() // Wichtig für die Zentrierung
+                .padding(16.dp)
+                .clickable {
+                    onNavigateToVersion()
+                },
+            textAlign = TextAlign.Center, // Zentriert den Text
+            fontSize = 12.sp, // Macht den Text klein
+            color = MaterialTheme.colorScheme.secondary // Eine dezente Farbe
+        )
 
         Spacer(Modifier.height(24.dp))
 
