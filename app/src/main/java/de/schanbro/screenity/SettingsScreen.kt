@@ -149,10 +149,10 @@ fun SettingsScreen(onNavigateToVersion: () -> Unit) {
 
         Spacer(Modifier.height(24.dp))
         val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
-        Text(text = "Screenity by Robin Schanbacher")
-        Text(text = "${packageInfo.versionName}")
+        //Text(text = "Screenity by Robin Schanbacher")
+        //Text(text = "${packageInfo.versionName}")
         Text(
-            text = "v${packageInfo.versionName}}",
+            text = "v${packageInfo.versionName}",
             modifier = Modifier
                 .fillMaxWidth() // Wichtig für die Zentrierung
                 .padding(16.dp)

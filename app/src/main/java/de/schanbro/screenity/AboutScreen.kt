@@ -131,11 +131,11 @@ fun AboutScreen(onBack: () -> Unit) {
                 Spacer(modifier = Modifier.height(48.dp))
 
                 // Footer
-                Text(
-                    text = "© 2026 Screenity Project",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.outline
-                )
+                //Text(
+                //    text = "© 2026 Screenity Project",
+                //    style = MaterialTheme.typography.bodySmall,
+                //    color = MaterialTheme.colorScheme.outline
+                //)
             }
         }
     }
