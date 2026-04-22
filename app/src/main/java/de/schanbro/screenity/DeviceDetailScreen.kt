@@ -101,9 +101,18 @@ fun DeviceDetailScreen(deviceId: String, onBack: () -> Unit) {
         scope.launch {
             isLoading = true
             try {
+                val userID = prefs.getString("userid", "") ?: ""
+                val password = prefs.getString("password", "") ?: ""
+
                 val client = OkHttpClient()
                 val fullUrl = "${serverUrl.trim().removeSuffix("/")}/summary"
-                val request = Request.Builder().url(fullUrl).build()
+
+                val credential = okhttp3.Credentials.basic(userID, password)
+
+                val request = Request.Builder()
+                    .url(fullUrl)
+                    .header("Authorization", credential)
+                    .build()
 
                 val response = withContext(Dispatchers.IO) { client.newCall(request).execute() }
 
