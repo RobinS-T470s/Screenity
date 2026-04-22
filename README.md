@@ -8,11 +8,12 @@ If you install Screenity on all your devices (currently just android possible), 
 # What is it able to do?
 - collect your screentime and send it to a self-hosted server
 - show your today's, local's and each device's screentime
+- multiple accounts
 
 # What is planned to implement?
 - Widgets
 - filters
-- multi-account (server)
+- admin-page (web)
 
 # Else
 As you hopefully noticed, the project is very new. It is also my first bigger project, so i'm sorry for the mistakes i'll make :)
