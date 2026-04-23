@@ -145,7 +145,7 @@ fun WeeklyBarChart(
 }
 
 @Composable
-fun HourlyLineChart(
+fun HourlyLineChart_old(
     dataPoints: List<Pair<String, Long>>,
     modifier: Modifier = Modifier
 ) {
@@ -229,7 +229,7 @@ fun HourlyLineChart(
 }
 
 @Composable
-fun ScreenTimeChart_old(
+fun ScreenTimeChart(
     dataPoints: List<Pair<String, Long>>,
     modifier: Modifier = Modifier
 ) {
