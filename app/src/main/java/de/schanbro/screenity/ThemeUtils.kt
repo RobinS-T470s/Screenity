@@ -18,11 +18,26 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.asAndroidPath
+import androidx.compose.ui.graphics.asComposePath
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.unit.sp
 import java.util.Calendar
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.font.FontWeight
+import kotlin.math.roundToInt
 
 // Das ist wie eine CSS-Klasse für die Screen-Struktur!
 @Composable
@@ -214,7 +229,7 @@ fun HourlyLineChart(
 }
 
 @Composable
-fun ScreenTimeChart(
+fun ScreenTimeChart_old(
     dataPoints: List<Pair<String, Long>>,
     modifier: Modifier = Modifier
 ) {
@@ -282,6 +297,137 @@ fun ScreenTimeChart(
     }
 }
 
+@Composable
+fun HourlyLineChart(
+    dataPoints: List<Pair<String, Long>>,
+    modifier: Modifier = Modifier
+) {
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val secondaryColor = MaterialTheme.colorScheme.secondary
+    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
+
+    // State für den aktuell berührten Punkt
+    var selectedIndex by remember { mutableStateOf<Int?>(null) }
+
+    val fullDayData = remember(dataPoints) {
+        (0..23).map { hour ->
+            val label = String.format("%02d:00", hour)
+            val existingPoint = dataPoints.find { it.first.startsWith(String.format("%02d:", hour)) }
+            label to (existingPoint?.second ?: 0L)
+        }
+    }
+
+    val maxUsage = fullDayData.maxOfOrNull { it.second }?.coerceAtLeast(1L) ?: 1L
+
+    Canvas(modifier = modifier
+        .fillMaxWidth()
+        .height(280.dp) // Etwas mehr Platz für das Tooltip oben
+        .padding(top = 60.dp, bottom = 30.dp, start = 20.dp, end = 20.dp)
+        .pointerInput(fullDayData) {
+            // Erkennt sowohl Tippen als auch Streichen (Drag)
+            detectDragGestures(
+                onDragStart = { offset ->
+                    val spacing = size.width / (fullDayData.size - 1)
+                    selectedIndex = (offset.x / spacing).roundToInt().coerceIn(0, 23)
+                },
+                onDrag = { change, _ ->
+                    val spacing = size.width / (fullDayData.size - 1)
+                    selectedIndex = (change.position.x / spacing).roundToInt().coerceIn(0, 23)
+                },
+                onDragEnd = { selectedIndex = null },
+                onDragCancel = { selectedIndex = null }
+            )
+        }
+        .pointerInput(fullDayData) {
+            detectTapGestures(onTap = { offset ->
+                val spacing = size.width / (fullDayData.size - 1)
+                selectedIndex = (offset.x / spacing).roundToInt().coerceIn(0, 23)
+            })
+        }
+    ) {
+        val width = size.width
+        val height = size.height
+        val spacing = width / (fullDayData.size - 1)
+
+        val points = fullDayData.mapIndexed { index, point ->
+            Offset(index * spacing, height - ((point.second.toFloat() / maxUsage) * height))
+        }
+
+        // --- ZEICHNEN DER KURVE (wie vorher) ---
+        val strokePath = Path().apply {
+            if (points.isNotEmpty()) {
+                moveTo(points[0].x, points[0].y)
+                for (i in 1 until points.size) {
+                    val prev = points[i - 1]
+                    val curr = points[i]
+                    cubicTo((prev.x + curr.x) / 2, prev.y, (prev.x + curr.x) / 2, curr.y, curr.x, curr.y)
+                }
+            }
+        }
+
+        drawPath(
+            path = strokePath,
+            color = primaryColor,
+            style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+        )
+
+        // --- INTERAKTIVES OVERLAY (WENN SELEKTIERT) ---
+        selectedIndex?.let { index ->
+            val selectedPoint = points[index]
+            val data = fullDayData[index]
+
+            // Vertikale Hilfslinie
+            drawLine(
+                color = primaryColor.copy(alpha = 0.4f),
+                start = Offset(selectedPoint.x, 0f),
+                end = Offset(selectedPoint.x, height),
+                pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+            )
+
+            // Highlight-Punkt auf der Linie
+            drawCircle(
+                color = primaryColor,
+                radius = 6.dp.toPx(),
+                center = selectedPoint
+            )
+
+            // Tooltip-Text (Uhrzeit & Dauer)
+            drawContext.canvas.nativeCanvas.apply {
+                val minutes = data.second / 60000
+                val text = "${data.first} • ${minutes}m"
+
+                drawText(
+                    text,
+                    selectedPoint.x,
+                    -20.dp.toPx(), // Positioniert über dem Chart
+                    android.graphics.Paint().apply {
+                        color = onSurfaceColor.toArgb()
+                        textSize = 14.sp.toPx()
+                        textAlign = android.graphics.Paint.Align.CENTER
+                        typeface = android.graphics.Typeface.DEFAULT_BOLD
+                    }
+                )
+            }
+        }
+
+        // --- ACHSENBESCHRIFTUNG (STATISCH) ---
+        fullDayData.forEachIndexed { index, point ->
+            if (index % 6 == 0 || index == 23) {
+                drawContext.canvas.nativeCanvas.drawText(
+                    point.first,
+                    index * spacing,
+                    height + 25.dp.toPx(),
+                    android.graphics.Paint().apply {
+                        color = onSurfaceColor.copy(alpha = 0.5f).toArgb()
+                        textSize = 10.sp.toPx()
+                        textAlign = android.graphics.Paint.Align.CENTER
+                    }
+                )
+            }
+        }
+    }
+}
+
 @Preview(showBackground = true)
 @Composable
 fun ChartsPreview() {
@@ -297,6 +443,13 @@ fun ChartsPreview() {
 
             Text("Tagesverlauf (Linie)", style = MaterialTheme.typography.titleMedium)
             HourlyLineChart(
+                dataPoints = (0..23).map { String.format("%02d:00", it) to (0..3600000).random().toLong() }
+            )
+
+            Spacer(Modifier.height(32.dp))
+
+            Text("Tagesverlauf2 (Linie)", style = MaterialTheme.typography.titleMedium)
+            HourlyLineChart2(
                 dataPoints = (0..23).map { String.format("%02d:00", it) to (0..3600000).random().toLong() }
             )
         }
