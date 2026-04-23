@@ -448,8 +448,8 @@ fun ChartsPreview() {
 
             Spacer(Modifier.height(32.dp))
 
-            Text("Tagesverlauf2 (Linie)", style = MaterialTheme.typography.titleMedium)
-            HourlyLineChart2(
+            Text("Tagesverlauf alt (Linie)", style = MaterialTheme.typography.titleMedium)
+            HourlyLineChart_old(
                 dataPoints = (0..23).map { String.format("%02d:00", it) to (0..3600000).random().toLong() }
             )
         }
