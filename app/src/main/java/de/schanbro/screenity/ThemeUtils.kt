@@ -17,9 +17,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.toArgb
+import java.util.Calendar
 
 // Das ist wie eine CSS-Klasse für die Screen-Struktur!
 @Composable
@@ -131,17 +134,29 @@ fun HourlyLineChart(
     dataPoints: List<Pair<String, Long>>,
     modifier: Modifier = Modifier
 ) {
-    if (dataPoints.isEmpty()) return
+    // 1. Filter: Nur Stunden anzeigen, die bereits vergangen oder gerade aktiv sind
+    val currentHour = remember { Calendar.getInstance().get(Calendar.HOUR_OF_DAY) }
 
-    // 1. FARBEN HIER OBEN EXTRAHIEREN (im Composable Context)
+    val filteredData = remember(dataPoints) {
+        dataPoints.filter { point ->
+            // Extrahiert die Stunde aus dem String "HH:mm"
+            val hourStr = point.first.split(":")[0]
+            val hourInt = hourStr.toIntOrNull() ?: 0
+            hourInt <= currentHour
+        }
+    }
+
+    if (filteredData.isEmpty()) return
+
     val primaryColor = MaterialTheme.colorScheme.primary
     val secondaryColor = MaterialTheme.colorScheme.secondary
     val onSurfaceColor = MaterialTheme.colorScheme.onSurface
 
-    val maxUsage = dataPoints.maxOfOrNull { it.second }?.coerceAtLeast(1L) ?: 1L
+    // Nutze filteredData für die Berechnung von maxUsage
+    val maxUsage = filteredData.maxOfOrNull { it.second }?.coerceAtLeast(1L) ?: 1L
     val scrollState = rememberScrollState()
     val segmentWidth = 60.dp
-    val totalWidth = segmentWidth * dataPoints.size
+    val totalWidth = segmentWidth * filteredData.size
 
     Box(modifier = modifier.horizontalScroll(scrollState)) {
         Canvas(modifier = Modifier
@@ -155,8 +170,8 @@ fun HourlyLineChart(
             val path = Path()
             val points = mutableListOf<Offset>()
 
-            // 1. Koordinaten berechnen
-            dataPoints.forEachIndexed { index, point ->
+            // Nutze filteredData für das Zeichnen
+            filteredData.forEachIndexed { index, point ->
                 val x = (segmentWidth.toPx() * index)
                 val y = canvasHeight - ((point.second.toFloat() / maxUsage) * usableHeight) - 40f
                 points.add(Offset(x, y))
@@ -164,32 +179,29 @@ fun HourlyLineChart(
                 if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
             }
 
-            // 2. Linie zeichnen
             drawPath(
                 path = path,
                 color = primaryColor,
                 style = Stroke(width = 6f, cap = StrokeCap.Round)
             )
 
-            // 3. Punkte und Labels zeichnen
             points.forEachIndexed { index, offset ->
                 drawCircle(color = primaryColor, radius = 8f, center = offset)
 
                 drawContext.canvas.nativeCanvas.apply {
-                    // Uhrzeit (z.B. 14:00)
-                    drawText(dataPoints[index].first, offset.x, canvasHeight,
+                    drawText(filteredData[index].first, offset.x, canvasHeight,
                         android.graphics.Paint().apply {
-                            color = onSurfaceColor.hashCode()
+                            color = onSurfaceColor.toArgb() // Nutze .toArgb() statt hashCode()
                             textSize = 24f
                             textAlign = android.graphics.Paint.Align.CENTER
                         }
                     )
-                    // Dauer (z.B. 45m)
-                    val m = dataPoints[index].second / 60000
+
+                    val m = filteredData[index].second / 60000
                     if (m > 0) {
                         drawText("${m}m", offset.x, offset.y - 20f,
                             android.graphics.Paint().apply {
-                                color = secondaryColor.hashCode()
+                                color = secondaryColor.toArgb()
                                 textSize = 22f
                                 textAlign = android.graphics.Paint.Align.CENTER
                             }

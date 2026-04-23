@@ -208,6 +208,10 @@ fun DeviceDetailScreen(deviceId: String, onBack: () -> Unit) {
                                 dataPoints = hourlyData,
                                 modifier = Modifier.padding(16.dp)
                             )
+                            HourlyLineChart(
+                                dataPoints = hourlyData,
+                                modifier = Modifier.padding(16.dp)
+                            )
                         }
                     } else {
                         Text("Keine Verlaufsdaten vorhanden.", modifier = Modifier.padding(bottom = 24.dp))
