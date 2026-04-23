@@ -15,6 +15,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
@@ -34,7 +35,7 @@ fun AboutScreen(onBack: () -> Unit) {
         }
     }
 
-    ScreenWrapper(title = "About") {
+    ScreenWrapper(title = stringResource(R.string.about)) {
         // Box mit fillMaxSize sorgt dafür, dass wir auf Tablets zentrieren können
         Box(
             modifier = Modifier
@@ -70,13 +71,13 @@ fun AboutScreen(onBack: () -> Unit) {
                         )
 
                         Text(
-                            text = "Screenity",
+                            text = stringResource(R.string.app_name),
                             style = MaterialTheme.typography.headlineLarge,
                             color = MaterialTheme.colorScheme.onSurface
                         )
 
                         Text(
-                            text = "Version $versionName",
+                            text = "${stringResource(R.string.version)} $versionName",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -87,13 +88,13 @@ fun AboutScreen(onBack: () -> Unit) {
 
                 // Sektion 2: Informationen
                 Text(
-                    text = "Developed with ❤️ by",
+                    text = stringResource(R.string.developed_by),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.secondary
                 )
 
                 Text(
-                    text = "Robin Schanbacher",
+                    text = stringResource(R.string.developer_name),
                     style = MaterialTheme.typography.titleLarge
                 )
 
@@ -112,7 +113,7 @@ fun AboutScreen(onBack: () -> Unit) {
                         horizontalArrangement = Arrangement.Center
                     ) {
                         Text(
-                            text = "View on GitHub",
+                            text = stringResource(R.string.view_on_github),
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )

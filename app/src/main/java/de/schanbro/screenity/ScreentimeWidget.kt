@@ -2,6 +2,7 @@ package de.schanbro.screenity
 
 import android.content.Context
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
@@ -66,7 +67,7 @@ class ScreentimeWidget : GlanceAppWidget() {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "Gesamtzeit",
+                    text = stringResource(R.string.all_time),
                     style = TextStyle(fontWeight = FontWeight.Bold, color = ColorProvider(Color.Black))
                 )
                 Spacer(GlanceModifier.height(4.dp))
@@ -76,7 +77,7 @@ class ScreentimeWidget : GlanceAppWidget() {
                 )
                 Spacer(GlanceModifier.height(4.dp))
                 Text(
-                    text = "${selectedDevices.size} Geräte",
+                    text = "${selectedDevices.size} ${stringResource(R.string.Devices)}",
                     style = TextStyle(color = ColorProvider(Color.Gray))
                 )
             }

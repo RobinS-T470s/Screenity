@@ -25,4 +25,26 @@
     <string name="server_not_reachable">Server nicht erreichbar</string>
     <string name="server_response">Server antwortet mit Code:</string>
     <string name="unknown_network_error">Unbekannter Netzwerkfehler</string>
+    <string name="about">Über</string>
+    <string name="version">Version</string>
+    <string name="developed_by">Entwickelt mit ❤️ von</string>
+    <string name="developer_name" translatable="false">Robin Schanbacher</string>
+    <string name="view_on_github">Auf GitHub ansehen</string>
+    <string name="delete_error">Löschfehler</string>
+    <string name="delete">Löschen</string>
+    <string name="edit">Bearbeiten</string>
+    <string name="no_history_data">Keine Verlaufsdaten vorhanden</string>
+    <string name="todays_app_usage">Heutige App-Nutzung</string>
+    <string name="delete_device">Gerät löschen?</string>
+    <string name="want_to_delete_device">Möchtest du \\\"%1$s\\\" und alle zugehörigen Daten wirklich unwiderruflich löschen?</string>
+    <string name="cancel">Abbrechen</string>
+    <string name="edit_name">Name bearbeiten</string>
+    <string name="device_name">Gerätename</string>
+    <string name="save">Speichern</string>
+    <string name="pls_enter_port">Bitte immer Port angeben (auch 443 oder 80)</string>
+    <string name="pword">Passwort</string>
+    <string name="user_id" translatable="false">UserID</string>
+    <string name="pword_visibility">Passwort-Sichtbarkeit</string>
+    <string name="uploud_intervall">Upload-Intervall: \\\"%1$s\\\" Minuten</string>
+    <string name="history_last_days">Verlauf letzter Tage</string>
 </resources>

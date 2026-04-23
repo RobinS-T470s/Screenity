@@ -46,6 +46,8 @@ fun TodayScreen() {
     var summary by remember { mutableStateOf<ServerSummary?>(null) }
     var isLoading by remember { mutableStateOf(false) }
 
+    val todayStr = remember { SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date()) }
+
     fun fetch() {
         if (serverUrl.isBlank()) return
         scope.launch {
@@ -82,8 +84,37 @@ fun TodayScreen() {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 TotalAllDevicesCard(s.today_total_all_devices_ms)
 
+                val hourlyData = remember(s) {
+                    // Sammle alle detaillierten Events von heute über alle Geräte hinweg
+                    val allTodayEvents = mutableListOf<ScreenEvent>()
+                    s.devices.forEach { device ->
+                        val report = device.reports?.get(todayStr)
+                        report?.detailed_events?.let { allTodayEvents.addAll(it) }
+                    }
+                    // Berechne die stündliche Verteilung
+                    calculateHourlyUsage(allTodayEvents)
+                }
+
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                ) {
+                    if (hourlyData.isNotEmpty()) {
+                        HourlyLineChart(
+                            dataPoints = hourlyData,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    } else {
+                        Text(
+                            stringResource(R.string.no_history_data),
+                            modifier = Modifier.padding(16.dp),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+
                 Text(
-                    text = "Nutzung letzte Tage",
+                    text = stringResource(R.string.history_last_days),
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(16.dp)
                 )
@@ -113,7 +144,7 @@ fun TodayScreen() {
                             modifier = Modifier.padding(16.dp)
                         )
                     } else {
-                        Text("Keine Verlaufsdaten vorhanden", Modifier.padding(16.dp))
+                        Text(stringResource(R.string.no_history_data), Modifier.padding(16.dp))
                     }
                 }
             }

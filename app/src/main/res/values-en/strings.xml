@@ -25,4 +25,24 @@
     <string name="server_not_reachable">Server not reachable</string>
     <string name="server_response">Server responses with code:</string>
     <string name="unknown_network_error">Unknown network error</string>
+    <string name="about">About</string>
+    <string name="version">Version</string>
+    <string name="developed_by">Developed with ❤️ by</string>
+    <string name="view_on_github">View on GitHub</string>
+    <string name="delete_error">Error while deleting</string>
+    <string name="delete">Delete</string>
+    <string name="edit">Edit</string>
+    <string name="no_history_data">No history data available</string>
+    <string name="todays_app_usage">Today\'s app-usage</string>
+    <string name="delete_device">Delete device?</string>
+    <string name="want_to_delete_device">Do you really want to permanently delete \\\"%1$s\\\" and all associated data?</string>
+    <string name="cancel">Cancel</string>
+    <string name="edit_name">Edit name</string>
+    <string name="device_name">Device name</string>
+    <string name="save">Save</string>
+    <string name="pls_enter_port">Please always enter port (443 or 80 too)</string>
+    <string name="pword">Password</string>
+    <string name="pword_visibility">Visibility of password</string>
+    <string name="uploud_intervall">Uploud-intervall: \\\"%1$s\\\" minutes</string>
+    <string name="history_last_days">Histroy of last days</string>
 </resources>

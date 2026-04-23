@@ -66,7 +66,7 @@ fun SettingsScreen(onNavigateToVersion: () -> Unit) {
         OutlinedTextField(
             value = userID,
             onValueChange = { userID = it; status = ConnectionState.Idle },
-            label = { Text("UserID") },
+            label = { Text(stringResource(R.string.user_id)) },
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -76,14 +76,14 @@ fun SettingsScreen(onNavigateToVersion: () -> Unit) {
         OutlinedTextField(
             value = password,
             onValueChange = { password = it; status = ConnectionState.Idle },
-            label = { Text("Passwort") },
+            label = { Text(stringResource(R.string.pword)) },
             modifier = Modifier.fillMaxWidth(),
             visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             trailingIcon = {
                 val image = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
                 IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                    Icon(imageVector = image, contentDescription = "Passwort Sichtbarkeit")
+                    Icon(imageVector = image, contentDescription = stringResource(R.string.pword_visibility))
                 }
             }
         )
@@ -92,7 +92,7 @@ fun SettingsScreen(onNavigateToVersion: () -> Unit) {
 
         // --- MATERIAL 3 SLIDER ---
         Text(
-            text = "Upload-Intervall: $selectedInterval Minuten",
+            text = stringResource(R.string.uploud_intervall, selectedInterval),
             style = MaterialTheme.typography.titleSmall
         )
 

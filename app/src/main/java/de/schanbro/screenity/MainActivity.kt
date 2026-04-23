@@ -242,7 +242,7 @@ fun SetupScreen(onUrlSaved: (String) -> Unit) {
             placeholder = { Text("http://...") }
         )
         Text(
-            text = "Bitte Port immer angeben (auch 443/80)"
+            text = stringResource(R.string.pls_enter_url)
         )
 
         Spacer(Modifier.height(16.dp))

@@ -15,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.google.gson.Gson
@@ -39,7 +40,7 @@ fun DeviceDetailScreen(deviceId: String, onBack: () -> Unit) {
     var isLoading by remember { mutableStateOf(true) }
     var appsFromToday by remember { mutableStateOf<List<AppUsageDetail>>(emptyList()) }
     var eventsFromToday by remember { mutableStateOf<List<ScreenEvent>>(emptyList()) } // NEU
-    var deviceName by remember { mutableStateOf("Gerät") }
+    var deviceName by remember { mutableStateOf("...") }
 
     // Dialog-Steuerung
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -64,7 +65,6 @@ fun DeviceDetailScreen(deviceId: String, onBack: () -> Unit) {
                     onBack() // Nach dem Löschen zurück zur Liste
                 }
             } catch (e: Exception) {
-                android.util.Log.e("SCREENITY", "Löschfehler: ${e.message}")
             }
             isProcessing = false
         }
@@ -88,14 +88,12 @@ fun DeviceDetailScreen(deviceId: String, onBack: () -> Unit) {
                     showEditDialog = false
                 }
             } catch (e: Exception) {
-                android.util.Log.e("SCREENITY", "Updatefehler: ${e.message}")
             }
             isProcessing = false
         }
     }
 
     fun fetch() {
-        android.util.Log.d("SCREENITY_CHECK", "1. fetch() gestartet für ID: $deviceId")
         if (serverUrl.isBlank()) return
 
         scope.launch {
@@ -119,7 +117,6 @@ fun DeviceDetailScreen(deviceId: String, onBack: () -> Unit) {
                 if (response.isSuccessful) {
                     // WICHTIG: Body nur einmal auslesen und in Variable speichern
                     val responseBodyString = withContext(Dispatchers.IO) { response.body?.string() } ?: ""
-                    android.util.Log.d("SCREENITY_CHECK", "2. JSON geladen, Länge: ${responseBodyString.length}")
 
                     if (responseBodyString.isNotBlank()) {
                         try {
@@ -130,32 +127,22 @@ fun DeviceDetailScreen(deviceId: String, onBack: () -> Unit) {
 
                             if (device != null) {
                                 deviceName = device.device_name
-                                android.util.Log.d("SCREENITY_CHECK", "3. Gerät gefunden: ${device.device_name}")
 
                                 // Report für heute heraussuchen
                                 val report = device.reports?.get(todayStr)
                                 if (report != null) {
                                     appsFromToday = report.apps ?: emptyList()
                                     eventsFromToday = report.detailed_events ?: emptyList() // NEU: Events speichern
-                                    android.util.Log.d("SCREENITY_CHECK", "4. Apps/Events gefunden")
                                 } else {
-                                    android.util.Log.w("SCREENITY_CHECK", "Hinweis: Kein Report für $todayStr vorhanden.")
-                                    // Debug: Zeige welche Tage da sind
-                                    android.util.Log.d("SCREENITY_CHECK", "Verfügbare Tage: ${device.reports?.keys}")
                                 }
                             } else {
-                                android.util.Log.e("SCREENITY_CHECK", "Fehler: Gerät mit ID $deviceId nicht in Liste.")
                             }
                         } catch (e: Exception) {
-                            android.util.Log.e("SCREENITY_CHECK", "Parsing-Fehler: ${e.message}")
-                            android.util.Log.d("SCREENITY_CHECK", "Fehlerhaftes JSON: $responseBodyString")
                         }
                     }
                 } else {
-                    android.util.Log.e("SCREENITY_CHECK", "Server Fehler-Code: ${response.code}")
                 }
             } catch (e: Exception) {
-                android.util.Log.e("SCREENITY_CHECK", "Netzwerk-Fehler: ${e.message}")
             }
             isLoading = false
         }
@@ -168,18 +155,18 @@ fun DeviceDetailScreen(deviceId: String, onBack: () -> Unit) {
         headerAction = {
             // Löschen Button
             IconButton(onClick = { showDeleteDialog = true }) {
-                Icon(Icons.Default.Remove, contentDescription = "Löschen", tint = MaterialTheme.colorScheme.error)
+                Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.delete), tint = MaterialTheme.colorScheme.error)
             }
             // Bearbeiten Button
             IconButton(onClick = {
                 editNameText = deviceName // Aktuellen Namen ins Feld laden
                 showEditDialog = true
             }) {
-                Icon(Icons.Default.Edit, contentDescription = "Bearbeiten")
+                Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.edit))
             }
             // Aktualisieren Button
             IconButton(onClick = { fetch() }, enabled = !isLoading) {
-                Icon(Icons.Default.Refresh, contentDescription = "Aktualisieren")
+                Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.refresh))
             }
         }
     ) {
@@ -191,12 +178,12 @@ fun DeviceDetailScreen(deviceId: String, onBack: () -> Unit) {
             val hourlyData = remember(eventsFromToday) { calculateHourlyUsage(eventsFromToday) }
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 item {
-                    Text(
-                        "Nutzung über den Tag",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(vertical = 8.dp)
-                    )
+                    //Text(
+                    //    "Nutzung über den Tag",
+                    //    style = MaterialTheme.typography.titleMedium,
+                    //    color = MaterialTheme.colorScheme.primary,
+                    //    modifier = Modifier.padding(vertical = 8.dp)
+                    //)
 
                     if (hourlyData.isNotEmpty()) {
                         Card(
@@ -214,13 +201,13 @@ fun DeviceDetailScreen(deviceId: String, onBack: () -> Unit) {
                             )
                         }
                     } else {
-                        Text("Keine Verlaufsdaten vorhanden.", modifier = Modifier.padding(bottom = 24.dp))
+                        Text(stringResource(R.string.no_history_data), modifier = Modifier.padding(bottom = 24.dp))
                     }
                 }
 
                 item {
                     Text(
-                        text = "App-Nutzung heute ($todayStr):",
+                        text = "${stringResource(R.string.todays_app_usage)} ($todayStr):",
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(bottom = 16.dp)
@@ -231,7 +218,7 @@ fun DeviceDetailScreen(deviceId: String, onBack: () -> Unit) {
                     item {
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Text(
-                                "Keine detaillierten Daten für heute gefunden.",
+                                stringResource(R.string.no_history_data),
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         }
@@ -257,7 +244,7 @@ fun DeviceDetailScreen(deviceId: String, onBack: () -> Unit) {
                 }
             }
 
-            Text("Nutzung über den Tag", style = MaterialTheme.typography.titleMedium)
+            //Text("Nutzung über den Tag", style = MaterialTheme.typography.titleMedium)
 
             Card(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
@@ -274,8 +261,8 @@ fun DeviceDetailScreen(deviceId: String, onBack: () -> Unit) {
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Gerät löschen?") },
-            text = { Text("Möchtest du '$deviceName' und alle zugehörigen Daten wirklich unwiderruflich löschen?") },
+            title = { Text(stringResource(R.string.delete_device)) },
+            text = { Text(stringResource(R.string.want_to_delete_device, deviceName)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -286,11 +273,11 @@ fun DeviceDetailScreen(deviceId: String, onBack: () -> Unit) {
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) {
                     if (isProcessing) CircularProgressIndicator(modifier = Modifier.size(20.dp))
-                    else Text("Löschen")
+                    else Text(stringResource(R.string.delete))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) { Text("Abbrechen") }
+                TextButton(onClick = { showDeleteDialog = false }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
@@ -299,12 +286,12 @@ fun DeviceDetailScreen(deviceId: String, onBack: () -> Unit) {
     if (showEditDialog) {
         AlertDialog(
             onDismissRequest = { showEditDialog = false },
-            title = { Text("Name bearbeiten") },
+            title = { Text(stringResource(R.string.edit_name)) },
             text = {
                 TextField(
                     value = editNameText,
                     onValueChange = { editNameText = it },
-                    label = { Text("Gerätename") },
+                    label = { Text(stringResource(R.string.device_name)) },
                     singleLine = true
                 )
             },
@@ -313,11 +300,11 @@ fun DeviceDetailScreen(deviceId: String, onBack: () -> Unit) {
                     onClick = { updateDeviceName(editNameText) },
                     enabled = !isProcessing && editNameText.isNotBlank() // Verhindert leere Namen
                 ) {
-                    Text("Speichern")
+                    Text(stringResource(R.string.save))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showEditDialog = false }) { Text("Abbrechen") }
+                TextButton(onClick = { showEditDialog = false }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
