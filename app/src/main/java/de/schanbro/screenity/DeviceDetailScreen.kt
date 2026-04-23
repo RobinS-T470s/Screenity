@@ -204,10 +204,10 @@ fun DeviceDetailScreen(deviceId: String, onBack: () -> Unit) {
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
                         ) {
                             // Hier wird das Diagramm aus deiner Charts.kt aufgerufen
-                            ScreenTimeChart(
-                                dataPoints = hourlyData,
-                                modifier = Modifier.padding(16.dp)
-                            )
+                            //ScreenTimeChart(
+                            //    dataPoints = hourlyData,
+                            //    modifier = Modifier.padding(16.dp)
+                            //)
                             HourlyLineChart(
                                 dataPoints = hourlyData,
                                 modifier = Modifier.padding(16.dp)
