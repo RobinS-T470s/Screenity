@@ -21,4 +21,4 @@ Since i'm currently lerning Kotlin with Jetpack Compose, this is a project for m
 
 Since i'm still a student i'd be glad for any help. Thank you!
 
-[![Get it on Obtainium](https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png)](https://github.com/RobinS-T470s/Screenity)
+[![Get it on Obtainium](https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png)](obtainium://add/https://github.com/RobinS-T470s/Screenity)
