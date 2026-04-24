@@ -92,7 +92,7 @@ fun SettingsScreen(onNavigateToVersion: () -> Unit) {
 
         // --- MATERIAL 3 SLIDER ---
         Text(
-            text = stringResource(R.string.uploud_intervall, selectedInterval),
+            text = stringResource(R.string.upload_intervall, selectedInterval),
             style = MaterialTheme.typography.titleSmall
         )
 

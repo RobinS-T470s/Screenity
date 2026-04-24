@@ -53,6 +53,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.filled.PinDrop
+import androidx.compose.material.icons.filled.StackedLineChart
 import de.schanbro.screenity.ui.theme.ScreenityTheme
 import androidx.compose.runtime.LaunchedEffect
 import androidx.work.Constraints
@@ -64,6 +65,7 @@ import java.util.concurrent.TimeUnit
 
 sealed class Screen(val route: String) {
     object Today : Screen("today_screen")
+    object Summary : Screen("summary_screen")
 
     object Local : Screen("local_screen")
     object Devices : Screen("devices_screen")
@@ -145,6 +147,12 @@ class MainActivity : ComponentActivity() {
                                     label = { Text(stringResource(R.string.Today)) }
                                 )
                                 NavigationBarItem(
+                                    selected = currentRoute == Screen.Summary.route,
+                                    onClick = { navController.navigate(Screen.Summary.route) },
+                                    icon = { Icon(Icons.Default.StackedLineChart, contentDescription = null) },
+                                    label = { Text("Summary") }
+                                )
+                                NavigationBarItem(
                                     selected = currentRoute == Screen.Local.route,
                                     onClick = { navController.navigate(Screen.Local.route) },
                                     icon = { Icon(Icons.Default.PinDrop, contentDescription = null) },
@@ -186,6 +194,9 @@ class MainActivity : ComponentActivity() {
                         ) {
                             composable(de.schanbro.screenity.Screen.Today.route) {
                                 TodayScreen()
+                            }
+                            composable(de.schanbro.screenity.Screen.Summary.route) {
+                                SummaryScreen()
                             }
                             composable(de.schanbro.screenity.Screen.Local.route) {
                                 LocalScreen()
