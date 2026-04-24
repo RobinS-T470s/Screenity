@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.provider.Settings
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -21,6 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
 import kotlinx.coroutines.Dispatchers
@@ -45,6 +47,10 @@ fun DevicesScreen(onNavigateToDetail: (String) -> Unit) {
 
     var devicesList by remember { mutableStateOf(emptyList<DeviceSummary>()) }
     var isLoading by remember { mutableStateOf(false) }
+
+    val myDeviceId = remember {
+        Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
+    }
 
     fun fetch() {
         if (serverUrl.isBlank()) return
@@ -93,6 +99,7 @@ fun DevicesScreen(onNavigateToDetail: (String) -> Unit) {
                 ) { device ->
                     DeviceUsageRow(
                         device = device,
+                        isOwnDevice = device.device_id == myDeviceId,
                         onClick = { onNavigateToDetail(device.device_id) }
                     )
                 }
@@ -102,7 +109,7 @@ fun DevicesScreen(onNavigateToDetail: (String) -> Unit) {
 }
 
 @Composable
-fun DeviceUsageRow(device: DeviceSummary, onClick: () -> Unit) {
+fun DeviceUsageRow(device: DeviceSummary, isOwnDevice: Boolean, onClick: () -> Unit) {
     val h = device.today_ms / 3600000
     val m = (device.today_ms % 3600000) / 60000
 
@@ -111,6 +118,7 @@ fun DeviceUsageRow(device: DeviceSummary, onClick: () -> Unit) {
             .fillMaxWidth()
             .padding(vertical = 6.dp)
             .clickable { onClick() },
+        border = if (isOwnDevice) BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)) else null,
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Row(
@@ -119,8 +127,23 @@ fun DeviceUsageRow(device: DeviceSummary, onClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(device.device_name, style = MaterialTheme.typography.titleMedium)
-                Text("ID: ${device.device_id.take(8)}...", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(device.device_name, style = MaterialTheme.typography.titleMedium)
+
+                    if (isOwnDevice) {
+                        Spacer(Modifier.width(8.dp))
+                        SuggestionChip(
+                            onClick = { },
+                            label = { Text("This device", fontSize = 10.sp) },
+                            modifier = Modifier.height(20.dp)
+                        )
+                    }
+                }
+                Text(
+                    "ID: ${device.device_id.take(8)}...",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
             Text(
                 text = String.format("%dh %02dm", h, m),

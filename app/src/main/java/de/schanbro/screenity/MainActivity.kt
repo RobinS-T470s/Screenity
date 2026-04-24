@@ -152,12 +152,12 @@ class MainActivity : ComponentActivity() {
                                     icon = { Icon(Icons.Default.StackedLineChart, contentDescription = null) },
                                     label = { Text("Summary") }
                                 )
-                                NavigationBarItem(
-                                    selected = currentRoute == Screen.Local.route,
-                                    onClick = { navController.navigate(Screen.Local.route) },
-                                    icon = { Icon(Icons.Default.PinDrop, contentDescription = null) },
-                                    label = { Text(stringResource(R.string.Local)) }
-                                )
+                                //NavigationBarItem(
+                                //    selected = currentRoute == Screen.Local.route,
+                                //   onClick = { navController.navigate(Screen.Local.route) },
+                                //    icon = { Icon(Icons.Default.PinDrop, contentDescription = null) },
+                                //    label = { Text(stringResource(R.string.Local)) }
+                                //)
                                 NavigationBarItem(
                                     selected = currentRoute == Screen.Devices.route,
                                     onClick = { navController.navigate(Screen.Devices.route) },
