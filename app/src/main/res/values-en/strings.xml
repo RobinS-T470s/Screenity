@@ -45,4 +45,7 @@
     <string name="pword_visibility">Visibility of password</string>
     <string name="upload_intervall">Uploud-intervall: %1$s minutes</string>
     <string name="history_last_days">Histroy of last days</string>
+    <string name="Summary">Summary</string>
+    <string name="next_day">Next day</string>
+    <string name="previous_day">Previous day</string>
 </resources>

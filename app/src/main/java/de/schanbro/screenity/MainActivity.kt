@@ -52,15 +52,26 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.compose.foundation.layout.height
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.PinDrop
 import androidx.compose.material.icons.filled.StackedLineChart
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.NavigationDrawerItemDefaults
+import androidx.compose.material3.rememberDrawerState
 import de.schanbro.screenity.ui.theme.ScreenityTheme
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 
 sealed class Screen(val route: String) {
@@ -127,99 +138,174 @@ class MainActivity : ComponentActivity() {
                     val navController = rememberNavController()
                     val currentBackStack by navController.currentBackStackEntryAsState()
                     val currentRoute = currentBackStack?.destination?.route
-                    Scaffold(
-                        modifier = Modifier.fillMaxSize(),
-                        topBar = {
-                            TopAppBar(
-                                title = { Text(stringResource(R.string.app_name)) },
-                                colors = TopAppBarDefaults.topAppBarColors(
-                                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                    titleContentColor = MaterialTheme.colorScheme.primary
-                                )
-                            )
-                        },
-                        bottomBar = {
-                            NavigationBar {
-                                NavigationBarItem(
-                                    selected = currentRoute == Screen.Today.route,
-                                    onClick = { navController.navigate(Screen.Today.route) },
-                                    icon = { Icon(Icons.Default.Today, contentDescription = null) },
-                                    label = { Text(stringResource(R.string.Today)) }
-                                )
-                                NavigationBarItem(
-                                    selected = currentRoute == Screen.Summary.route,
-                                    onClick = { navController.navigate(Screen.Summary.route) },
-                                    icon = { Icon(Icons.Default.StackedLineChart, contentDescription = null) },
-                                    label = { Text("Summary") }
-                                )
-                                //NavigationBarItem(
-                                //    selected = currentRoute == Screen.Local.route,
-                                //   onClick = { navController.navigate(Screen.Local.route) },
-                                //    icon = { Icon(Icons.Default.PinDrop, contentDescription = null) },
-                                //    label = { Text(stringResource(R.string.Local)) }
-                                //)
-                                NavigationBarItem(
-                                    selected = currentRoute == Screen.Devices.route,
-                                    onClick = { navController.navigate(Screen.Devices.route) },
-                                    icon = {
-                                        Icon(
-                                            Icons.Default.Devices,
-                                            contentDescription = null
-                                        )
+
+                    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed) // State für das Menü
+                    val scope = rememberCoroutineScope() // Um das Menü per Code zu öffnen (Suspend Function)
+                    ModalNavigationDrawer(
+                        drawerState = drawerState,
+                        drawerContent = {
+                            ModalDrawerSheet {
+                                Text(stringResource(R.string.app_name), modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.headlineMedium)
+                                HorizontalDivider()
+
+                                NavigationDrawerItem(
+                                    label = { Text(stringResource(R.string.about)) },
+                                    selected = currentRoute == Screen.About.route,
+                                    icon = { Icon(Icons.Default.Info, contentDescription = null) },
+                                    onClick = {
+                                        scope.launch { drawerState.close() }
+                                        navController.navigate(Screen.About.route)
                                     },
-                                    label = { Text(stringResource(R.string.Devices)) }
+                                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                                 )
-                                NavigationBarItem(
+
+                                NavigationDrawerItem(
+                                    label = { Text(stringResource(R.string.Settings)) },
                                     selected = currentRoute == Screen.Settings.route,
-                                    onClick = { navController.navigate(Screen.Settings.route) },
-                                    icon = {
-                                        Icon(
-                                            Icons.Default.Settings,
-                                            contentDescription = null
-                                        )
+                                    icon = { Icon(Icons.Default.Settings, contentDescription = null) },
+                                    onClick = {
+                                        scope.launch { drawerState.close() }
+                                        navController.navigate(Screen.Settings.route)
                                     },
-                                    label = { Text(stringResource(R.string.Settings)) }
+                                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                                 )
+                                // Hier kannst du weitere Menüpunkte hinzufügen
                             }
                         }
-                    ) { innerPadding ->
-                        NavHost(
-                            navController = navController,
-                            startDestination = de.schanbro.screenity.Screen.Today.route,
-                            modifier = Modifier.padding(innerPadding),
-                            enterTransition = { fadeIn(animationSpec = tween(220)) + scaleIn(initialScale = 0.92f) },
-                            exitTransition = { fadeOut(animationSpec = tween(90)) },
-                            popEnterTransition = { fadeIn(animationSpec = tween(220)) },
-                            popExitTransition = { fadeOut(animationSpec = tween(90)) + scaleOut(targetScale = 0.92f) }
-                        ) {
-                            composable(de.schanbro.screenity.Screen.Today.route) {
-                                TodayScreen()
-                            }
-                            composable(de.schanbro.screenity.Screen.Summary.route) {
-                                SummaryScreen()
-                            }
-                            composable(de.schanbro.screenity.Screen.Local.route) {
-                                LocalScreen()
-                            }
-                            composable(de.schanbro.screenity.Screen.Devices.route) {
-                                DevicesScreen(onNavigateToDetail = { id ->
-                                    navController.navigate("device_detail/$id")
-                                })
-                            }
-                            composable(de.schanbro.screenity.Screen.Settings.route) {
-                                SettingsScreen(
-                                    onNavigateToVersion = { navController.navigate(Screen.About.route) }
+                    ) {
+                        Scaffold(
+                            modifier = Modifier.fillMaxSize(),
+                            topBar = {
+                                TopAppBar(
+                                    title = {
+                                        val title = when (currentRoute) {
+                                            Screen.Today.route -> stringResource(R.string.Today)
+                                            Screen.Summary.route -> "Summary"
+                                            Screen.Devices.route -> stringResource(R.string.Devices)
+                                            Screen.Local.route -> stringResource(R.string.Local)
+                                            Screen.Settings.route -> stringResource(R.string.Settings)
+                                            Screen.About.route -> stringResource(R.string.about)
+                                            // Für Detail-Screens mit Argumenten:
+                                            else -> if (currentRoute?.contains("device_detail") == true) stringResource(R.string.devices_overview) else stringResource(R.string.app_name)
+                                        }
+                                        Text(title)
+                                    },
+                                    navigationIcon = {
+                                        // Das Hamburger-Icon zum Öffnen des Menüs
+                                        IconButton(onClick = {
+                                            scope.launch { drawerState.open() }
+                                        }) {
+                                            Icon(Icons.Default.Menu, contentDescription = "Menu")
+                                        }
+                                    },
+                                    colors = TopAppBarDefaults.topAppBarColors(
+                                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                        titleContentColor = MaterialTheme.colorScheme.primary
+                                    )
                                 )
+                            },
+                            bottomBar = {
+                                NavigationBar {
+                                    NavigationBarItem(
+                                        selected = currentRoute == Screen.Today.route,
+                                        onClick = { navController.navigate(Screen.Today.route) },
+                                        icon = {
+                                            Icon(
+                                                Icons.Default.Today,
+                                                contentDescription = null
+                                            )
+                                        },
+                                        label = { Text(stringResource(R.string.Today)) }
+                                    )
+                                    NavigationBarItem(
+                                        selected = currentRoute == Screen.Summary.route,
+                                        onClick = { navController.navigate(Screen.Summary.route) },
+                                        icon = {
+                                            Icon(
+                                                Icons.Default.StackedLineChart,
+                                                contentDescription = null
+                                            )
+                                        },
+                                        label = { Text(stringResource(R.string.Summary)) }
+                                    )
+                                    NavigationBarItem(
+                                        selected = currentRoute == Screen.Local.route,
+                                       onClick = { navController.navigate(Screen.Local.route) },
+                                        icon = { Icon(Icons.Default.PinDrop, contentDescription = null) },
+                                        label = { Text(stringResource(R.string.Local)) }
+                                    )
+                                    NavigationBarItem(
+                                        selected = currentRoute == Screen.Devices.route,
+                                        onClick = { navController.navigate(Screen.Devices.route) },
+                                        icon = {
+                                            Icon(
+                                                Icons.Default.Devices,
+                                                contentDescription = null
+                                            )
+                                        },
+                                        label = { Text(stringResource(R.string.Devices)) }
+                                    )
+                                    //NavigationBarItem(
+                                    //    selected = currentRoute == Screen.Settings.route,
+                                    //    onClick = { navController.navigate(Screen.Settings.route) },
+                                    //    icon = {
+                                    //        Icon(
+                                    //            Icons.Default.Settings,
+                                    //            contentDescription = null
+                                    //        )
+                                    //    },
+                                    //    label = { Text(stringResource(R.string.Settings)) }
+                                    //)
+                                }
                             }
-                            composable(Screen.DeviceDetail.route) { backStackEntry ->
-                                val deviceId = backStackEntry.arguments?.getString("deviceId") ?: ""
-                                DeviceDetailScreen(
-                                    deviceId = deviceId,
-                                    onBack = { navController.popBackStack() } // Geht zurück zum TodayScreen
-                                )
-                            }
-                            composable ( de.schanbro.screenity.Screen.About.route ) {
-                                AboutScreen(onBack = { navController.popBackStack() })
+                        ) { innerPadding ->
+                            NavHost(
+                                navController = navController,
+                                startDestination = de.schanbro.screenity.Screen.Today.route,
+                                modifier = Modifier.padding(innerPadding),
+                                enterTransition = {
+                                    fadeIn(animationSpec = tween(220)) + scaleIn(
+                                        initialScale = 0.92f
+                                    )
+                                },
+                                exitTransition = { fadeOut(animationSpec = tween(90)) },
+                                popEnterTransition = { fadeIn(animationSpec = tween(220)) },
+                                popExitTransition = {
+                                    fadeOut(animationSpec = tween(90)) + scaleOut(
+                                        targetScale = 0.92f
+                                    )
+                                }
+                            ) {
+                                composable(de.schanbro.screenity.Screen.Today.route) {
+                                    TodayScreen()
+                                }
+                                composable(de.schanbro.screenity.Screen.Summary.route) {
+                                    SummaryScreen()
+                                }
+                                composable(de.schanbro.screenity.Screen.Local.route) {
+                                    LocalScreen()
+                                }
+                                composable(de.schanbro.screenity.Screen.Devices.route) {
+                                    DevicesScreen(onNavigateToDetail = { id ->
+                                        navController.navigate("device_detail/$id")
+                                    })
+                                }
+                                composable(de.schanbro.screenity.Screen.Settings.route) {
+                                    SettingsScreen(
+                                        onNavigateToVersion = { navController.navigate(Screen.About.route) }
+                                    )
+                                }
+                                composable(Screen.DeviceDetail.route) { backStackEntry ->
+                                    val deviceId =
+                                        backStackEntry.arguments?.getString("deviceId") ?: ""
+                                    DeviceDetailScreen(
+                                        deviceId = deviceId,
+                                        onBack = { navController.popBackStack() } // Geht zurück zum TodayScreen
+                                    )
+                                }
+                                composable(de.schanbro.screenity.Screen.About.route) {
+                                    AboutScreen(onBack = { navController.popBackStack() })
+                                }
                             }
                         }
                     }

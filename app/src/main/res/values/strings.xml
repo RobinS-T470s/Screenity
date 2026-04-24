@@ -47,4 +47,7 @@
     <string name="pword_visibility">Passwort-Sichtbarkeit</string>
     <string name="upload_intervall">Upload-Intervall: %1$s Minuten</string>
     <string name="history_last_days">Verlauf letzter Tage</string>
+    <string name="Summary">Zusammenfassung</string>
+    <string name="next_day">Nächster Tag</string>
+    <string name="previous_day">Vorheriger Tag</string>
 </resources>

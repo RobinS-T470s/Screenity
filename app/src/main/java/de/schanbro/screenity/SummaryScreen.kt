@@ -3,6 +3,7 @@ package de.schanbro.screenity
 
 import android.content.Context
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -73,6 +74,7 @@ fun SummaryScreen() {
             }
         }
     ) {
+        var showDatePicker by remember { mutableStateOf(false) }
         // 2. DATUMS-NAVIGATION (Buttons & Text)
         Surface(
             tonalElevation = 2.dp,
@@ -85,24 +87,71 @@ fun SummaryScreen() {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = { changeDate(-1) }) {
-                    Icon(Icons.Default.ChevronLeft, "Vorheriger Tag")
+                    Icon(Icons.Default.ChevronLeft, stringResource(R.string.previous_day))
                 }
 
+                // --- DATEPICKER DIALOG ---
+                if (showDatePicker) {
+                    val datePickerState = rememberDatePickerState(
+                        initialSelectedDateMillis = selectedCalendar.timeInMillis
+                    )
+
+                    DatePickerDialog(
+                        onDismissRequest = { showDatePicker = false },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                datePickerState.selectedDateMillis?.let { millis ->
+                                    val newCal = Calendar.getInstance().apply {
+                                        timeInMillis = millis
+                                    }
+                                    selectedCalendar = newCal // Aktualisiert den gesamten Screen
+                                }
+                                showDatePicker = false
+                            }) {
+                                Text(stringResource(id = android.R.string.ok))
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showDatePicker = false }) {
+                                Text(stringResource(id = android.R.string.cancel))
+                            }
+                        }
+                    ) {
+                        DatePicker(state = datePickerState)
+                    }
+                }
+
+                // --- KLICKBARE DATUMSANZEIGE ---
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.clickable { /* Hier könnte man einen DatePicker öffnen */ }
+                    modifier = Modifier
+                        .clickable { showDatePicker = true } // Öffnet den Dialog
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
                 ) {
                     Text(
-                        text = if (dateFormatter.format(Date()) == selectedDateStr) "Heute" else displayFormatter.format(selectedCalendar.time),
-                        style = MaterialTheme.typography.titleMedium
+                        text = if (dateFormatter.format(Date()) == selectedDateStr)
+                            stringResource(R.string.Today)
+                        else
+                            displayFormatter.format(selectedCalendar.time),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary
                     )
-                    Text(selectedDateStr, style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        text = selectedDateStr,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
 
                 IconButton(onClick = { changeDate(1) }) {
-                    Icon(Icons.Default.ChevronRight, "Nächster Tag")
+                    Icon(Icons.Default.ChevronRight, stringResource(R.string.next_day))
                 }
             }
+        }
+
+        val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+        val screenWidthPx = with(androidx.compose.ui.platform.LocalDensity.current) {
+            configuration.screenWidthDp.dp.toPx()
         }
 
         if (isLoading) {
@@ -118,15 +167,34 @@ fun SummaryScreen() {
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState())
                         .pointerInput(Unit) {
-                            detectHorizontalDragGestures { change, dragAmount ->
-                                if (dragAmount > 50) { // Swipe nach Rechts -> Gestern
-                                    changeDate(-1)
+                            var totalDrag = 0f
+                            var swiped = false // Sperre für diese Geste
+
+                            detectDragGestures(
+                                onDragStart = {
+                                    totalDrag = 0f
+                                    swiped = false
+                                },
+                                onDrag = { change, dragAmount ->
                                     change.consume()
-                                } else if (dragAmount < -50) { // Swipe nach Links -> Morgen
-                                    changeDate(1)
-                                    change.consume()
+                                    totalDrag += dragAmount.x
+
+                                    // Erst wenn 50% der Breite (screenWidthPx / 2) erreicht sind UND noch nicht gewechselt wurde
+                                    if (!swiped) {
+                                        if (totalDrag > screenWidthPx / 2) {
+                                            changeDate(-1) // Gestern
+                                            swiped = true  // Sperre aktivieren
+                                        } else if (totalDrag < -(screenWidthPx / 2)) {
+                                            changeDate(1)  // Morgen
+                                            swiped = true  // Sperre aktivieren
+                                        }
+                                    }
+                                },
+                                onDragEnd = {
+                                    totalDrag = 0f
+                                    swiped = false
                                 }
-                            }
+                            )
                         }
                 ) {
                     // Daten für das ausgewählte Datum berechnen
@@ -167,6 +235,7 @@ fun SummaryScreen() {
                             )
                         }
                     }
+
                 }
             }
         }
