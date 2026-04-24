@@ -180,7 +180,7 @@ class MainActivity : ComponentActivity() {
                                     title = {
                                         val title = when (currentRoute) {
                                             Screen.Today.route -> stringResource(R.string.Today)
-                                            Screen.Summary.route -> "Summary"
+                                            Screen.Summary.route -> stringResource(R.string.Summary)
                                             Screen.Devices.route -> stringResource(R.string.Devices)
                                             Screen.Local.route -> stringResource(R.string.Local)
                                             Screen.Settings.route -> stringResource(R.string.Settings)
