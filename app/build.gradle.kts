@@ -71,6 +71,7 @@ dependencies {
     implementation(libs.androidx.compose.foundation)
     implementation(libs.androidx.compose.ui.geometry)
     implementation(libs.androidx.compose.runtime)
+    implementation(libs.androidx.foundation)
     val workVersion = "2.9.0" // Prüfe hier gern auf die aktuellste Version
     implementation("androidx.work:work-runtime-ktx:$workVersion")
     implementation(libs.androidx.core.ktx)

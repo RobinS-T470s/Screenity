@@ -2,6 +2,11 @@ package de.schanbro.screenity
 
 import com.google.gson.annotations.SerializedName
 
+data class ScreenEvent(
+    val timestamp: Long,
+    val type: String, // "SCREEN_ON", "SCREEN_OFF", "APP_OPEN", "APP_CLOSE"
+    val packageName: String? = null
+)
 data class ServerSummary(
     val devices: List<DeviceSummary>,
     val total_all_devices_hours: Double,

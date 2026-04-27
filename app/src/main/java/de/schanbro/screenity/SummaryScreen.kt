@@ -160,82 +160,104 @@ fun SummaryScreen() {
             }
         } else {
             summary?.let { s ->
-                // 3. HORIZONTALES WISCHEN ERMÖGLICHEN
-                // Wir nutzen einen PointerInput für einfache Swipes
+                val startOfDay = remember(selectedCalendar) {
+                    (selectedCalendar.clone() as Calendar).apply {
+                        set(Calendar.HOUR_OF_DAY, 0)
+                        set(Calendar.MINUTE, 0)
+                        set(Calendar.SECOND, 0)
+                        set(Calendar.MILLISECOND, 0)
+                    }.timeInMillis
+                }
+
+// Ende des Tages für den "Handy noch an" Fall
+                val endOfSelectedDay = remember(startOfDay) {
+                    startOfDay + (24 * 60 * 60 * 1000L) - 1
+                }
+
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState())
-                        .pointerInput(Unit) {
+                        .pointerInput(selectedCalendar) { // State-Reset bei Datumswechsel
                             var totalDrag = 0f
-                            var swiped = false // Sperre für diese Geste
-
-                            detectDragGestures(
-                                onDragStart = {
-                                    totalDrag = 0f
-                                    swiped = false
-                                },
-                                onDrag = { change, dragAmount ->
+                            detectHorizontalDragGestures(
+                                onHorizontalDrag = { change, dragAmount ->
                                     change.consume()
-                                    totalDrag += dragAmount.x
-
-                                    // Erst wenn 50% der Breite (screenWidthPx / 2) erreicht sind UND noch nicht gewechselt wurde
-                                    if (!swiped) {
-                                        if (totalDrag > screenWidthPx / 2) {
-                                            changeDate(-1) // Gestern
-                                            swiped = true  // Sperre aktivieren
-                                        } else if (totalDrag < -(screenWidthPx / 2)) {
-                                            changeDate(1)  // Morgen
-                                            swiped = true  // Sperre aktivieren
-                                        }
-                                    }
+                                    totalDrag += dragAmount
                                 },
                                 onDragEnd = {
+                                    if (totalDrag > 300) changeDate(-1)
+                                    else if (totalDrag < -300) changeDate(1)
                                     totalDrag = 0f
-                                    swiped = false
                                 }
                             )
                         }
                 ) {
-                    // Daten für das ausgewählte Datum berechnen
-                    val dayTotalMs = remember(s, selectedDateStr) {
-                        s.devices.sumOf { it.reports?.get(selectedDateStr)?.total_screen_time_ms ?: 0L }
-                    }
+                    // 2. TIMELINE DATEN VORBEREITEN
+                    val timelineEvents = remember(s, selectedDateStr) {
+                        val events = mutableListOf<Pair<Long, Long>>()
 
-                    TotalAllDevicesCard(dayTotalMs)
-
-                    val hourlyData = remember(s, selectedDateStr) {
-                        val events = mutableListOf<ScreenEvent>()
                         s.devices.forEach { device ->
-                            device.reports?.get(selectedDateStr)?.detailed_events?.let { events.addAll(it) }
+                            val report = device.reports?.get(selectedDateStr)
+                            val rawEvents = report?.detailed_events?.sortedBy { it.timestamp } ?: emptyList()
+
+                            var lastOnTimestamp: Long? = null
+
+                            rawEvents.forEach { ev ->
+                                when (ev.type) {
+                                    "SCREEN_ON" -> {
+                                        if (lastOnTimestamp == null) lastOnTimestamp = ev.timestamp
+                                    }
+                                    "SCREEN_OFF" -> {
+                                        if (lastOnTimestamp != null) {
+                                            events.add(lastOnTimestamp!! to ev.timestamp)
+                                            lastOnTimestamp = null
+                                        } else {
+                                            // Handy war seit Mitternacht AN
+                                            events.add(startOfDay to ev.timestamp)
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Sonderfall: Handy ist am Ende des gewählten Tages noch an
+                            if (lastOnTimestamp != null) {
+                                // Wenn heute ausgewählt ist -> bis jetzt. Wenn Vergangenheit -> bis 23:59.
+                                val isToday = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date()) == selectedDateStr
+                                val endTime = if (isToday) System.currentTimeMillis() else endOfSelectedDay
+                                events.add(lastOnTimestamp!! to endTime)
+                            }
                         }
-                        calculateHourlyUsage(events)
+                        events.sortBy { it.first }
+                        events
                     }
 
-                    // --- CHART DISPLAY ---
-                    Text(
-                        text = "Stündlicher Verlauf",
-                        style = MaterialTheme.typography.titleSmall,
-                        modifier = Modifier.padding(start = 16.dp, top = 16.dp)
-                    )
-
-                    Card(
-                        modifier = Modifier.fillMaxWidth().padding(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
-                    ) {
-                        if (hourlyData.isNotEmpty()) {
-                            HourlyLineChart(
-                                dataPoints = hourlyData,
-                                modifier = Modifier.padding(16.dp)
+                    // 3. ANZEIGE DER TIMELINE
+                    if (timelineEvents.isNotEmpty()) {
+                        ActivityTimelineChart(
+                            events = timelineEvents,
+                            // Wichtig: Die Chart braucht auch das startOfDay des gewählten Tages!
+                            // Falls du ActivityTimelineChart angepasst hast, übergib es hier.
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    } else {
+                        // Optional: Ein Platzhalter, damit das UI nicht springt
+                        Card(
+                            modifier = Modifier.fillMaxWidth().padding(16.dp).height(100.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(
+                                    alpha = 0.5f
+                                )
                             )
-                        } else {
-                            Text(
-                                "Keine Daten für diesen Tag",
-                                modifier = Modifier.padding(32.dp).align(Alignment.CenterHorizontally)
-                            )
+                        ) {
+                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Text(
+                                    "Keine Aktivitäts-Details",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
                         }
                     }
-
                 }
             }
         }

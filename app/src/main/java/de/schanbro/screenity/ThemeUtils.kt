@@ -1,457 +1,1 @@
-package de.schanbro.screenity
-
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.Canvas
-import androidx.compose.material3.Surface
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.asAndroidPath
-import androidx.compose.ui.graphics.asComposePath
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.unit.sp
-import java.util.Calendar
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.text.font.FontWeight
-import kotlin.math.roundToInt
-
-// Das ist wie eine CSS-Klasse für die Screen-Struktur!
-@Composable
-fun ScreenWrapper(
-    title: String,
-    headerAction: @Composable (() -> Unit)? = null,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp) // Zentrales Padding für die gesamte App
-    ) {
-        // Einheitlicher Header für alle Screens
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically // Besser zentriert
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.weight(1f), // NIMMT RESTLICHEN PLATZ EIN
-                maxLines = 1, // Optional: Verhindert zweite Zeile
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis // Macht "..."
-            )
-
-            // Die Icons in eine eigene Row packen, damit sie beieinander bleiben
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                headerAction?.invoke()
-            }
-        }
-
-        Spacer(Modifier.height(16.dp))
-
-        // Hier wird der eigentliche Inhalt des Screens eingesetzt
-        content()
-    }
-}
-
-@Composable
-fun WeeklyBarChart(
-    dataPoints: List<Pair<String, Long>>,
-    modifier: Modifier = Modifier
-) {
-    if (dataPoints.isEmpty()) return
-
-    // 1. FARBEN HIER OBEN EXTRAHIEREN (im Composable Context)
-    val primaryColor = MaterialTheme.colorScheme.primary
-    val secondaryColor = MaterialTheme.colorScheme.secondary
-    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
-
-    val maxUsage = dataPoints.maxOfOrNull { it.second }?.coerceAtLeast(1L) ?: 1L
-    val scrollState = rememberScrollState()
-    val segmentWidth = 70.dp
-    val totalWidth = segmentWidth * dataPoints.size
-
-    Box(modifier = modifier.horizontalScroll(scrollState)) {
-        Canvas(modifier = Modifier
-            .width(totalWidth)
-            .height(250.dp)
-            .padding(top = 24.dp, bottom = 20.dp)
-        ) {
-            val canvasHeight = size.height
-            val usableHeight = canvasHeight - 80f
-            val barWidth = 40.dp.toPx()
-
-            dataPoints.forEachIndexed { index, point ->
-                val xCenter = (segmentWidth.toPx() * index) + (segmentWidth.toPx() / 2)
-                val barHeight = (point.second.toFloat() / maxUsage) * usableHeight
-
-                // Balken zeichnen (primaryColor nutzen)
-                drawRoundRect(
-                    color = primaryColor,
-                    topLeft = Offset(xCenter - barWidth / 2, canvasHeight - barHeight - 40f),
-                    size = Size(barWidth, barHeight),
-                    cornerRadius = CornerRadius(10f, 10f)
-                )
-
-                drawContext.canvas.nativeCanvas.apply {
-                    val h = point.second / 3600000
-                    val m = (point.second % 3600000) / 60000
-
-                    // 2. DIE VARIABLEN NUTZEN (statt MaterialTheme direkt)
-                    drawText("${h}h ${m}m", xCenter, canvasHeight - barHeight - 55f,
-                        android.graphics.Paint().apply {
-                            color = secondaryColor.hashCode() // Variable nutzen
-                            textSize = 26f
-                            textAlign = android.graphics.Paint.Align.CENTER
-                        }
-                    )
-
-                    drawText(point.first.takeLast(5), xCenter, canvasHeight,
-                        android.graphics.Paint().apply {
-                            color = onSurfaceColor.hashCode() // Variable nutzen
-                            textSize = 28f
-                            textAlign = android.graphics.Paint.Align.CENTER
-                        }
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun HourlyLineChart_old(
-    dataPoints: List<Pair<String, Long>>,
-    modifier: Modifier = Modifier
-) {
-    // 1. Filter: Nur Stunden anzeigen, die bereits vergangen oder gerade aktiv sind
-    val currentHour = remember { Calendar.getInstance().get(Calendar.HOUR_OF_DAY) }
-
-    val filteredData = remember(dataPoints) {
-        dataPoints.filter { point ->
-            // Extrahiert die Stunde aus dem String "HH:mm"
-            val hourStr = point.first.split(":")[0]
-            val hourInt = hourStr.toIntOrNull() ?: 0
-            hourInt <= currentHour
-        }
-    }
-
-    if (filteredData.isEmpty()) return
-
-    val primaryColor = MaterialTheme.colorScheme.primary
-    val secondaryColor = MaterialTheme.colorScheme.secondary
-    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
-
-    // Nutze filteredData für die Berechnung von maxUsage
-    val maxUsage = filteredData.maxOfOrNull { it.second }?.coerceAtLeast(1L) ?: 1L
-    val scrollState = rememberScrollState()
-    val segmentWidth = 60.dp
-    val totalWidth = segmentWidth * filteredData.size
-
-    Box(modifier = modifier.horizontalScroll(scrollState)) {
-        Canvas(modifier = Modifier
-            .width(totalWidth)
-            .height(250.dp)
-            .padding(top = 30.dp, bottom = 20.dp, start = 30.dp, end = 30.dp)
-        ) {
-            val canvasHeight = size.height
-            val usableHeight = canvasHeight - 80f
-
-            val path = Path()
-            val points = mutableListOf<Offset>()
-
-            // Nutze filteredData für das Zeichnen
-            filteredData.forEachIndexed { index, point ->
-                val x = (segmentWidth.toPx() * index)
-                val y = canvasHeight - ((point.second.toFloat() / maxUsage) * usableHeight) - 40f
-                points.add(Offset(x, y))
-
-                if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
-            }
-
-            drawPath(
-                path = path,
-                color = primaryColor,
-                style = Stroke(width = 6f, cap = StrokeCap.Round)
-            )
-
-            points.forEachIndexed { index, offset ->
-                drawCircle(color = primaryColor, radius = 8f, center = offset)
-
-                drawContext.canvas.nativeCanvas.apply {
-                    drawText(filteredData[index].first, offset.x, canvasHeight,
-                        android.graphics.Paint().apply {
-                            color = onSurfaceColor.toArgb() // Nutze .toArgb() statt hashCode()
-                            textSize = 24f
-                            textAlign = android.graphics.Paint.Align.CENTER
-                        }
-                    )
-
-                    val m = filteredData[index].second / 60000
-                    if (m > 0) {
-                        drawText("${m}m", offset.x, offset.y - 20f,
-                            android.graphics.Paint().apply {
-                                color = secondaryColor.toArgb()
-                                textSize = 22f
-                                textAlign = android.graphics.Paint.Align.CENTER
-                            }
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun ScreenTimeChart(
-    dataPoints: List<Pair<String, Long>>,
-    modifier: Modifier = Modifier
-) {
-    if (dataPoints.isEmpty()) return
-
-    // 1. FARBEN HIER OBEN EXTRAHIEREN (im Composable Context)
-    val primaryColor = MaterialTheme.colorScheme.primary
-    val secondaryColor = MaterialTheme.colorScheme.secondary
-    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
-
-    val maxUsage = dataPoints.maxOfOrNull { it.second }?.coerceAtLeast(1L) ?: 1L
-    val scrollState = rememberScrollState()
-    LaunchedEffect(dataPoints) {
-        scrollState.animateScrollTo(scrollState.maxValue)
-    }
-    val segmentWidth = 70.dp
-    val totalWidth = segmentWidth * dataPoints.size
-
-    Box(modifier = modifier.horizontalScroll(scrollState)) {
-        Canvas(modifier = Modifier
-            .width(totalWidth)
-            .height(250.dp)
-            .padding(top = 24.dp, bottom = 20.dp)
-        ) {
-            val canvasHeight = size.height
-            val usableHeight = canvasHeight - 80f
-            val barWidth = 40.dp.toPx()
-
-            dataPoints.forEachIndexed { index, point ->
-                val xCenter = (segmentWidth.toPx() * index) + (segmentWidth.toPx() / 2)
-                val barHeight = (point.second.toFloat() / maxUsage) * usableHeight
-
-                drawRoundRect(
-                    color = primaryColor,
-                    topLeft = Offset(xCenter - barWidth / 2, canvasHeight - barHeight - 40f),
-                    size = Size(barWidth, barHeight),
-                    cornerRadius = CornerRadius(12f, 12f)
-                )
-
-                drawContext.canvas.nativeCanvas.apply {
-                    val h = point.second / 3600000
-                    val m = (point.second % 3600000) / 60000
-                    val timeText = if (h > 0) "${h}h ${m}m" else "${m}m"
-
-                    // Zeit oben
-                    drawText(timeText, xCenter, canvasHeight - barHeight - 55f,
-                        android.graphics.Paint().apply {
-                            color = secondaryColor.hashCode()
-                            textSize = 26f
-                            textAlign = android.graphics.Paint.Align.CENTER
-                            isFakeBoldText = true
-                        }
-                    )
-                    // Label unten
-                    drawText(point.first.takeLast(5), xCenter, canvasHeight,
-                        android.graphics.Paint().apply {
-                            color = onSurfaceColor.hashCode()
-                            textSize = 28f
-                            textAlign = android.graphics.Paint.Align.CENTER
-                        }
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun HourlyLineChart(
-    dataPoints: List<Pair<String, Long>>,
-    modifier: Modifier = Modifier
-) {
-    val primaryColor = MaterialTheme.colorScheme.primary
-    val secondaryColor = MaterialTheme.colorScheme.secondary
-    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
-
-    // State für den aktuell berührten Punkt
-    var selectedIndex by remember { mutableStateOf<Int?>(null) }
-
-    val fullDayData = remember(dataPoints) {
-        (0..23).map { hour ->
-            val label = String.format("%02d:00", hour)
-            val existingPoint = dataPoints.find { it.first.startsWith(String.format("%02d:", hour)) }
-            label to (existingPoint?.second ?: 0L)
-        }
-    }
-
-    val maxUsage = fullDayData.maxOfOrNull { it.second }?.coerceAtLeast(1L) ?: 1L
-
-    Canvas(modifier = modifier
-        .fillMaxWidth()
-        .height(280.dp) // Etwas mehr Platz für das Tooltip oben
-        .padding(top = 60.dp, bottom = 30.dp, start = 20.dp, end = 20.dp)
-        .pointerInput(fullDayData) {
-            // Erkennt sowohl Tippen als auch Streichen (Drag)
-            detectDragGestures(
-                onDragStart = { offset ->
-                    val spacing = size.width / (fullDayData.size - 1)
-                    selectedIndex = (offset.x / spacing).roundToInt().coerceIn(0, 23)
-                },
-                onDrag = { change, _ ->
-                    val spacing = size.width / (fullDayData.size - 1)
-                    selectedIndex = (change.position.x / spacing).roundToInt().coerceIn(0, 23)
-                },
-                onDragEnd = { selectedIndex = null },
-                onDragCancel = { selectedIndex = null }
-            )
-        }
-        .pointerInput(fullDayData) {
-            detectTapGestures(onTap = { offset ->
-                val spacing = size.width / (fullDayData.size - 1)
-                selectedIndex = (offset.x / spacing).roundToInt().coerceIn(0, 23)
-            })
-        }
-    ) {
-        val width = size.width
-        val height = size.height
-        val spacing = width / (fullDayData.size - 1)
-
-        val points = fullDayData.mapIndexed { index, point ->
-            Offset(index * spacing, height - ((point.second.toFloat() / maxUsage) * height))
-        }
-
-        // --- ZEICHNEN DER KURVE (wie vorher) ---
-        val strokePath = Path().apply {
-            if (points.isNotEmpty()) {
-                moveTo(points[0].x, points[0].y)
-                for (i in 1 until points.size) {
-                    val prev = points[i - 1]
-                    val curr = points[i]
-                    cubicTo((prev.x + curr.x) / 2, prev.y, (prev.x + curr.x) / 2, curr.y, curr.x, curr.y)
-                }
-            }
-        }
-
-        drawPath(
-            path = strokePath,
-            color = primaryColor,
-            style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
-        )
-
-        // --- INTERAKTIVES OVERLAY (WENN SELEKTIERT) ---
-        selectedIndex?.let { index ->
-            val selectedPoint = points[index]
-            val data = fullDayData[index]
-
-            // Vertikale Hilfslinie
-            drawLine(
-                color = primaryColor.copy(alpha = 0.4f),
-                start = Offset(selectedPoint.x, 0f),
-                end = Offset(selectedPoint.x, height),
-                pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
-            )
-
-            // Highlight-Punkt auf der Linie
-            drawCircle(
-                color = primaryColor,
-                radius = 6.dp.toPx(),
-                center = selectedPoint
-            )
-
-            // Tooltip-Text (Uhrzeit & Dauer)
-            drawContext.canvas.nativeCanvas.apply {
-                val minutes = data.second / 60000
-                val text = "${data.first} • ${minutes}m"
-
-                drawText(
-                    text,
-                    selectedPoint.x,
-                    -20.dp.toPx(), // Positioniert über dem Chart
-                    android.graphics.Paint().apply {
-                        color = onSurfaceColor.toArgb()
-                        textSize = 14.sp.toPx()
-                        textAlign = android.graphics.Paint.Align.CENTER
-                        typeface = android.graphics.Typeface.DEFAULT_BOLD
-                    }
-                )
-            }
-        }
-
-        // --- ACHSENBESCHRIFTUNG (STATISCH) ---
-        fullDayData.forEachIndexed { index, point ->
-            if (index % 6 == 0 || index == 23) {
-                drawContext.canvas.nativeCanvas.drawText(
-                    point.first,
-                    index * spacing,
-                    height + 25.dp.toPx(),
-                    android.graphics.Paint().apply {
-                        color = onSurfaceColor.copy(alpha = 0.5f).toArgb()
-                        textSize = 10.sp.toPx()
-                        textAlign = android.graphics.Paint.Align.CENTER
-                    }
-                )
-            }
-        }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun ChartsPreview() {
-    MaterialTheme {
-        Column(Modifier.padding(16.dp)) {
-            Text("Wochenübersicht (Balken)", style = MaterialTheme.typography.titleMedium)
-            WeeklyBarChart(
-                dataPoints = listOf("Mo" to 5000000L, "Di" to 3000000L, "Mi" to 7000000L,
-                    "Do" to 2000000L, "Fr" to 8000000L, "Sa" to 4000000L, "So" to 9000000L)
-            )
-
-            Spacer(Modifier.height(32.dp))
-
-            Text("Tagesverlauf (Linie)", style = MaterialTheme.typography.titleMedium)
-            HourlyLineChart(
-                dataPoints = (0..23).map { String.format("%02d:00", it) to (0..3600000).random().toLong() }
-            )
-
-            Spacer(Modifier.height(32.dp))
-
-            Text("Tagesverlauf alt (Linie)", style = MaterialTheme.typography.titleMedium)
-            HourlyLineChart_old(
-                dataPoints = (0..23).map { String.format("%02d:00", it) to (0..3600000).random().toLong() }
-            )
-        }
-    }
-}
+package de.schanbro.screenityimport androidx.compose.foundation.layout.*import androidx.compose.material3.MaterialThemeimport androidx.compose.material3.Textimport androidx.compose.runtime.Composableimport androidx.compose.ui.Alignmentimport androidx.compose.ui.Modifierimport androidx.compose.ui.unit.dpimport androidx.compose.foundation.Canvasimport androidx.compose.foundation.ScrollStateimport androidx.compose.foundation.backgroundimport androidx.compose.material3.Surfaceimport androidx.compose.ui.geometry.CornerRadiusimport androidx.compose.ui.geometry.Offsetimport androidx.compose.ui.geometry.Sizeimport androidx.compose.ui.graphics.nativeCanvasimport androidx.compose.ui.tooling.preview.Previewimport androidx.compose.foundation.horizontalScrollimport androidx.compose.foundation.rememberScrollStateimport androidx.compose.runtime.LaunchedEffectimport androidx.compose.runtime.rememberimport androidx.compose.ui.graphics.Brushimport androidx.compose.ui.graphics.Colorimport androidx.compose.ui.graphics.Pathimport androidx.compose.ui.graphics.StrokeCapimport androidx.compose.ui.graphics.StrokeJoinimport androidx.compose.ui.graphics.asAndroidPathimport androidx.compose.ui.graphics.asComposePathimport androidx.compose.ui.graphics.drawscope.Strokeimport androidx.compose.ui.graphics.toArgbimport androidx.compose.ui.unit.spimport java.util.Calendarimport androidx.compose.foundation.gestures.detectDragGesturesimport androidx.compose.foundation.gestures.detectTapGesturesimport androidx.compose.foundation.gestures.detectTransformGesturesimport androidx.compose.foundation.shape.RoundedCornerShapeimport androidx.compose.material3.CardDefaultsimport androidx.compose.material3.ElevatedCardimport androidx.compose.runtime.getValueimport androidx.compose.runtime.mutableStateOfimport androidx.compose.runtime.setValueimport androidx.compose.ui.graphics.PathEffectimport androidx.compose.ui.graphics.drawscope.drawIntoCanvasimport androidx.compose.ui.input.pointer.pointerInputimport androidx.compose.ui.text.font.FontWeightimport kotlin.math.roundToInt// Das ist wie eine CSS-Klasse für die Screen-Struktur!@Composablefun ScreenWrapper(    title: String,    headerAction: @Composable (() -> Unit)? = null,    content: @Composable ColumnScope.() -> Unit) {    Column(        modifier = Modifier            .fillMaxSize()            .padding(16.dp) // Zentrales Padding für die gesamte App    ) {        // Einheitlicher Header für alle Screens        Row(            modifier = Modifier.fillMaxWidth(),            horizontalArrangement = Arrangement.SpaceBetween,            verticalAlignment = Alignment.CenterVertically // Besser zentriert        ) {            Text(                text = title,                style = MaterialTheme.typography.headlineMedium,                color = MaterialTheme.colorScheme.onSurface,                modifier = Modifier.weight(1f), // NIMMT RESTLICHEN PLATZ EIN                maxLines = 1, // Optional: Verhindert zweite Zeile                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis // Macht "..."            )            // Die Icons in eine eigene Row packen, damit sie beieinander bleiben            Row(verticalAlignment = Alignment.CenterVertically) {                headerAction?.invoke()            }        }        Spacer(Modifier.height(16.dp))        // Hier wird der eigentliche Inhalt des Screens eingesetzt        content()    }}@Composablefun WeeklyBarChart(    dataPoints: List<Pair<String, Long>>,    modifier: Modifier = Modifier) {    if (dataPoints.isEmpty()) return    // 1. FARBEN HIER OBEN EXTRAHIEREN (im Composable Context)    val primaryColor = MaterialTheme.colorScheme.primary    val secondaryColor = MaterialTheme.colorScheme.secondary    val onSurfaceColor = MaterialTheme.colorScheme.onSurface    val maxUsage = dataPoints.maxOfOrNull { it.second }?.coerceAtLeast(1L) ?: 1L    val scrollState = rememberScrollState()    val segmentWidth = 70.dp    val totalWidth = segmentWidth * dataPoints.size    Box(modifier = modifier.horizontalScroll(scrollState)) {        Canvas(modifier = Modifier            .width(totalWidth)            .height(250.dp)            .padding(top = 24.dp, bottom = 20.dp)        ) {            val canvasHeight = size.height            val usableHeight = canvasHeight - 80f            val barWidth = 40.dp.toPx()            dataPoints.forEachIndexed { index, point ->                val xCenter = (segmentWidth.toPx() * index) + (segmentWidth.toPx() / 2)                val barHeight = (point.second.toFloat() / maxUsage) * usableHeight                // Balken zeichnen (primaryColor nutzen)                drawRoundRect(                    color = primaryColor,                    topLeft = Offset(xCenter - barWidth / 2, canvasHeight - barHeight - 40f),                    size = Size(barWidth, barHeight),                    cornerRadius = CornerRadius(10f, 10f)                )                drawContext.canvas.nativeCanvas.apply {                    val h = point.second / 3600000                    val m = (point.second % 3600000) / 60000                    // 2. DIE VARIABLEN NUTZEN (statt MaterialTheme direkt)                    drawText("${h}h ${m}m", xCenter, canvasHeight - barHeight - 55f,                        android.graphics.Paint().apply {                            color = secondaryColor.hashCode() // Variable nutzen                            textSize = 26f                            textAlign = android.graphics.Paint.Align.CENTER                        }                    )                    drawText(point.first.takeLast(5), xCenter, canvasHeight,                        android.graphics.Paint().apply {                            color = onSurfaceColor.hashCode() // Variable nutzen                            textSize = 28f                            textAlign = android.graphics.Paint.Align.CENTER                        }                    )                }            }        }    }}@Composablefun HourlyLineChart_old(    dataPoints: List<Pair<String, Long>>,    modifier: Modifier = Modifier) {    // 1. Filter: Nur Stunden anzeigen, die bereits vergangen oder gerade aktiv sind    val currentHour = remember { Calendar.getInstance().get(Calendar.HOUR_OF_DAY) }    val filteredData = remember(dataPoints) {        dataPoints.filter { point ->            // Extrahiert die Stunde aus dem String "HH:mm"            val hourStr = point.first.split(":")[0]            val hourInt = hourStr.toIntOrNull() ?: 0            hourInt <= currentHour        }    }    if (filteredData.isEmpty()) return    val primaryColor = MaterialTheme.colorScheme.primary    val secondaryColor = MaterialTheme.colorScheme.secondary    val onSurfaceColor = MaterialTheme.colorScheme.onSurface    // Nutze filteredData für die Berechnung von maxUsage    val maxUsage = filteredData.maxOfOrNull { it.second }?.coerceAtLeast(1L) ?: 1L    val scrollState = rememberScrollState()    val segmentWidth = 60.dp    val totalWidth = segmentWidth * filteredData.size    Box(modifier = modifier.horizontalScroll(scrollState)) {        Canvas(modifier = Modifier            .width(totalWidth)            .height(250.dp)            .padding(top = 30.dp, bottom = 20.dp, start = 30.dp, end = 30.dp)        ) {            val canvasHeight = size.height            val usableHeight = canvasHeight - 80f            val path = Path()            val points = mutableListOf<Offset>()            // Nutze filteredData für das Zeichnen            filteredData.forEachIndexed { index, point ->                val x = (segmentWidth.toPx() * index)                val y = canvasHeight - ((point.second.toFloat() / maxUsage) * usableHeight) - 40f                points.add(Offset(x, y))                if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)            }            drawPath(                path = path,                color = primaryColor,                style = Stroke(width = 6f, cap = StrokeCap.Round)            )            points.forEachIndexed { index, offset ->                drawCircle(color = primaryColor, radius = 8f, center = offset)                drawContext.canvas.nativeCanvas.apply {                    drawText(filteredData[index].first, offset.x, canvasHeight,                        android.graphics.Paint().apply {                            color = onSurfaceColor.toArgb() // Nutze .toArgb() statt hashCode()                            textSize = 24f                            textAlign = android.graphics.Paint.Align.CENTER                        }                    )                    val m = filteredData[index].second / 60000                    if (m > 0) {                        drawText("${m}m", offset.x, offset.y - 20f,                            android.graphics.Paint().apply {                                color = secondaryColor.toArgb()                                textSize = 22f                                textAlign = android.graphics.Paint.Align.CENTER                            }                        )                    }                }            }        }    }}@Composablefun ScreenTimeChart(    dataPoints: List<Pair<String, Long>>,    modifier: Modifier = Modifier) {    if (dataPoints.isEmpty()) return    // 1. FARBEN HIER OBEN EXTRAHIEREN (im Composable Context)    val primaryColor = MaterialTheme.colorScheme.primary    val secondaryColor = MaterialTheme.colorScheme.secondary    val onSurfaceColor = MaterialTheme.colorScheme.onSurface    val maxUsage = dataPoints.maxOfOrNull { it.second }?.coerceAtLeast(1L) ?: 1L    val scrollState = rememberScrollState()    LaunchedEffect(dataPoints) {        scrollState.animateScrollTo(scrollState.maxValue)    }    val segmentWidth = 70.dp    val totalWidth = segmentWidth * dataPoints.size    Box(modifier = modifier.horizontalScroll(scrollState)) {        Canvas(modifier = Modifier            .width(totalWidth)            .height(250.dp)            .padding(top = 24.dp, bottom = 20.dp)        ) {            val canvasHeight = size.height            val usableHeight = canvasHeight - 80f            val barWidth = 40.dp.toPx()            dataPoints.forEachIndexed { index, point ->                val xCenter = (segmentWidth.toPx() * index) + (segmentWidth.toPx() / 2)                val barHeight = (point.second.toFloat() / maxUsage) * usableHeight                drawRoundRect(                    color = primaryColor,                    topLeft = Offset(xCenter - barWidth / 2, canvasHeight - barHeight - 40f),                    size = Size(barWidth, barHeight),                    cornerRadius = CornerRadius(12f, 12f)                )                drawContext.canvas.nativeCanvas.apply {                    val h = point.second / 3600000                    val m = (point.second % 3600000) / 60000                    val timeText = if (h > 0) "${h}h ${m}m" else "${m}m"                    // Zeit oben                    drawText(timeText, xCenter, canvasHeight - barHeight - 55f,                        android.graphics.Paint().apply {                            color = secondaryColor.hashCode()                            textSize = 26f                            textAlign = android.graphics.Paint.Align.CENTER                            isFakeBoldText = true                        }                    )                    // Label unten                    drawText(point.first.takeLast(5), xCenter, canvasHeight,                        android.graphics.Paint().apply {                            color = onSurfaceColor.hashCode()                            textSize = 28f                            textAlign = android.graphics.Paint.Align.CENTER                        }                    )                }            }        }    }}@Composablefun HourlyLineChart(    dataPoints: List<Pair<String, Long>>,    modifier: Modifier = Modifier) {    val primaryColor = MaterialTheme.colorScheme.primary    val secondaryColor = MaterialTheme.colorScheme.secondary    val onSurfaceColor = MaterialTheme.colorScheme.onSurface    // State für den aktuell berührten Punkt    var selectedIndex by remember { mutableStateOf<Int?>(null) }    val fullDayData = remember(dataPoints) {        (0..23).map { hour ->            val label = String.format("%02d:00", hour)            val existingPoint = dataPoints.find { it.first.startsWith(String.format("%02d:", hour)) }            label to (existingPoint?.second ?: 0L)        }    }    val maxUsage = fullDayData.maxOfOrNull { it.second }?.coerceAtLeast(1L) ?: 1L    Canvas(modifier = modifier        .fillMaxWidth()        .height(280.dp) // Etwas mehr Platz für das Tooltip oben        .padding(top = 60.dp, bottom = 30.dp, start = 20.dp, end = 20.dp)        .pointerInput(fullDayData) {            // Erkennt sowohl Tippen als auch Streichen (Drag)            detectDragGestures(                onDragStart = { offset ->                    val spacing = size.width / (fullDayData.size - 1)                    selectedIndex = (offset.x / spacing).roundToInt().coerceIn(0, 23)                },                onDrag = { change, _ ->                    val spacing = size.width / (fullDayData.size - 1)                    selectedIndex = (change.position.x / spacing).roundToInt().coerceIn(0, 23)                },                onDragEnd = { selectedIndex = null },                onDragCancel = { selectedIndex = null }            )        }        .pointerInput(fullDayData) {            detectTapGestures(onTap = { offset ->                val spacing = size.width / (fullDayData.size - 1)                selectedIndex = (offset.x / spacing).roundToInt().coerceIn(0, 23)            })        }    ) {        val width = size.width        val height = size.height        val spacing = width / (fullDayData.size - 1)        val points = fullDayData.mapIndexed { index, point ->            Offset(index * spacing, height - ((point.second.toFloat() / maxUsage) * height))        }        // --- ZEICHNEN DER KURVE (wie vorher) ---        val strokePath = Path().apply {            if (points.isNotEmpty()) {                moveTo(points[0].x, points[0].y)                for (i in 1 until points.size) {                    val prev = points[i - 1]                    val curr = points[i]                    cubicTo((prev.x + curr.x) / 2, prev.y, (prev.x + curr.x) / 2, curr.y, curr.x, curr.y)                }            }        }        drawPath(            path = strokePath,            color = primaryColor,            style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)        )        // --- INTERAKTIVES OVERLAY (WENN SELEKTIERT) ---        selectedIndex?.let { index ->            val selectedPoint = points[index]            val data = fullDayData[index]            // Vertikale Hilfslinie            drawLine(                color = primaryColor.copy(alpha = 0.4f),                start = Offset(selectedPoint.x, 0f),                end = Offset(selectedPoint.x, height),                pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)            )            // Highlight-Punkt auf der Linie            drawCircle(                color = primaryColor,                radius = 6.dp.toPx(),                center = selectedPoint            )            // Tooltip-Text (Uhrzeit & Dauer)            drawContext.canvas.nativeCanvas.apply {                val minutes = data.second / 60000                val text = "${data.first} • ${minutes}m"                drawText(                    text,                    selectedPoint.x,                    -20.dp.toPx(), // Positioniert über dem Chart                    android.graphics.Paint().apply {                        color = onSurfaceColor.toArgb()                        textSize = 14.sp.toPx()                        textAlign = android.graphics.Paint.Align.CENTER                        typeface = android.graphics.Typeface.DEFAULT_BOLD                    }                )            }        }        // --- ACHSENBESCHRIFTUNG (STATISCH) ---        fullDayData.forEachIndexed { index, point ->            if (index % 6 == 0 || index == 23) {                drawContext.canvas.nativeCanvas.drawText(                    point.first,                    index * spacing,                    height + 25.dp.toPx(),                    android.graphics.Paint().apply {                        color = onSurfaceColor.copy(alpha = 0.5f).toArgb()                        textSize = 10.sp.toPx()                        textAlign = android.graphics.Paint.Align.CENTER                    }                )            }        }    }}@Composablefun ActivityTimelineChart(    events: List<Pair<Long, Long>>,    modifier: Modifier = Modifier) {    val colorScheme = MaterialTheme.colorScheme    val primaryColor = colorScheme.primary    val cursorColor = colorScheme.tertiary // Kontrast zum restlichen Blau    val onSurfaceColor = colorScheme.onSurface    var scale by remember { mutableStateOf(1f) }    var touchX by remember { mutableStateOf<Float?>(null) }    val startOfDay = remember {        Calendar.getInstance().apply {            set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)        }.timeInMillis    }    val dayInMs = 24 * 60 * 60 * 1000L    ElevatedCard(        modifier = modifier.fillMaxWidth(),        shape = RoundedCornerShape(16.dp),        colors = CardDefaults.elevatedCardColors(containerColor = colorScheme.surface)    ) {        Column(modifier = Modifier.padding(16.dp)) {            Text(                text = "Live-Timeline",                style = MaterialTheme.typography.titleSmall,                color = colorScheme.primary,                fontWeight = FontWeight.Bold            )            // Spacer schafft Platz für den Tooltip INNERHALB der Card (keine Überlagerung der Headline)            Spacer(modifier = Modifier.height(30.dp))            Box(                modifier = Modifier                    .fillMaxWidth()                    .height(100.dp)                    .pointerInput(Unit) {                        detectTransformGestures { _, _, zoom, _ ->                            scale = (scale * zoom).coerceIn(1f, 15f)                        }                    }                    .pointerInput(Unit) {                        detectDragGestures(                            onDragStart = { touchX = it.x },                            onDrag = { change, _ -> touchX = change.position.x },                            onDragEnd = { touchX = null },                            onDragCancel = { touchX = null }                        )                    }                    .pointerInput(Unit) {                        detectTapGestures(onTap = { touchX = it.x })                    }            ) {                Canvas(modifier = Modifier.fillMaxSize()) {                    val width = size.width                    val viewWidth = width * scale                    val height = size.height                    // Hintergrund-Track                    drawRoundRect(                        color = colorScheme.surfaceVariant.copy(alpha = 0.5f),                        size = size,                        cornerRadius = CornerRadius(12.dp.toPx())                    )                    // Stunden-Raster                    val step = if (scale > 6f) 1 else if (scale > 3f) 2 else 4                    for (hour in 0..24 step step) {                        val x = (hour.toFloat() / 24f) * viewWidth                        if (x in 0f..width) {                            drawLine(                                color = onSurfaceColor.copy(alpha = 0.1f),                                start = Offset(x, 0f), end = Offset(x, height),                                strokeWidth = 1.dp.toPx()                            )                        }                    }                    // Daten (Balken)                    events.forEach { event ->                        val startX = ((event.first - startOfDay).toFloat() / dayInMs) * viewWidth                        val eventWidth = ((event.second - event.first).toFloat() / dayInMs) * viewWidth                        if (startX + eventWidth > 0 && startX < width) {                            drawRect(                                color = primaryColor,                                topLeft = Offset(startX.coerceAtLeast(0f), 0f),                                size = Size(                                    if (startX < 0) (eventWidth + startX).coerceAtLeast(0f)                                    else eventWidth.coerceAtLeast(2f),                                    height                                )                            )                        }                    }                    // Interaktiver Cursor & Bubble-Tooltip                    touchX?.let { x ->                        val timeAtTouch = startOfDay + ((x / viewWidth) * dayInMs).toLong()                        val calendar = Calendar.getInstance().apply { timeInMillis = timeAtTouch }                        val timeString = String.format("%02d:%02d",                            calendar.get(Calendar.HOUR_OF_DAY).coerceIn(0, 23),                            calendar.get(Calendar.MINUTE).coerceIn(0, 59)                        )                        // Kontrastreiche Cursor-Linie                        drawLine(                            color = cursorColor,                            start = Offset(x, -5f),                            end = Offset(x, height + 5f),                            strokeWidth = 3.dp.toPx(),                            cap = StrokeCap.Round                        )                        // Tooltip-Bubble zeichnen                        drawIntoCanvas { canvas ->                            val paint = android.graphics.Paint().apply {                                color = cursorColor.toArgb()                                textSize = 12.sp.toPx()                                textAlign = android.graphics.Paint.Align.CENTER                                typeface = android.graphics.Typeface.DEFAULT_BOLD                            }                            val textWidth = paint.measureText(timeString)                            val bubbleWidth = textWidth + 24f                            // Hintergrund der Bubble                            drawRoundRect(                                color = cursorColor,                                topLeft = Offset(x - bubbleWidth / 2, -35.dp.toPx()),                                size = Size(bubbleWidth, 24.dp.toPx()),                                cornerRadius = CornerRadius(6.dp.toPx())                            )                            // Uhrzeit-Text in der Bubble                            canvas.nativeCanvas.drawText(                                timeString, x, -19.dp.toPx(),                                paint.apply { color = colorScheme.onTertiary.toArgb() }                            )                        }                    }                }            }            Spacer(modifier = Modifier.height(16.dp))        }    }}@Preview(showBackground = true)@Composablefun ChartsPreview() {    MaterialTheme {        Column(Modifier.padding(16.dp)) {            Text("Wochenübersicht (Balken)", style = MaterialTheme.typography.titleMedium)            //WeeklyBarChart(            //    dataPoints = listOf("Mo" to 5000000L, "Di" to 3000000L, "Mi" to 7000000L,            //        "Do" to 2000000L, "Fr" to 8000000L, "Sa" to 4000000L, "So" to 9000000L)            //)            //Spacer(Modifier.height(32.dp))            Text("Tagesverlauf (Linie)", style = MaterialTheme.typography.titleMedium)            HourlyLineChart(                dataPoints = (0..23).map { String.format("%02d:00", it) to (0..3600000).random().toLong() }            )            //Spacer(Modifier.height(32.dp))            //Text("Tagesverlauf alt (Linie)", style = MaterialTheme.typography.titleMedium)            //HourlyLineChart_old(            //    dataPoints = (0..23).map { String.format("%02d:00", it) to (0..3600000).random().toLong() }            //)            Spacer(Modifier.height(32.dp))            Column(                modifier = Modifier                    .background(MaterialTheme.colorScheme.background)                    .padding(16.dp)            ) {                ActivityTimelineChart(                    events = generateMockTimelineEvents(),                    modifier = Modifier.padding(vertical = 16.dp)                )            }        }    }}private fun generateMockTimelineEvents(): List<Pair<Long, Long>> {    val cal = Calendar.getInstance().apply {        set(Calendar.HOUR_OF_DAY, 0)        set(Calendar.MINUTE, 0)        set(Calendar.SECOND, 0)        set(Calendar.MILLISECOND, 0)    }    val startOfDay = cal.timeInMillis    val events = mutableListOf<Pair<Long, Long>>()    // -- MORGENS (Viele kurze Check-ins) --    // 07:10 - 07:15 (Nachricht checken)    events.add(startOfDay + (7 * 60 + 10) * 60000 to startOfDay + (7 * 60 + 15) * 60000)    // 07:30 - 07:32 (Wetter)    events.add(startOfDay + (7 * 60 + 30) * 60000 to startOfDay + (7 * 60 + 32) * 60000)    // 08:00 - 08:20 (Bahnfahrt, Zeitung lesen)    events.add(startOfDay + (8 * 60 + 0) * 60000 to startOfDay + (8 * 60 + 20) * 60000)    // -- MITTAGS (Kurze Nutzung) --    // 12:15 - 12:30 (Pause)    events.add(startOfDay + (12 * 60 + 15) * 60000 to startOfDay + (12 * 60 + 30) * 60000)    // 14:50 - 14:51 (Sehr kurzer Check, < 1 min)    // Das Chart sollte dies trotzdem als feine Linie zeichnen    events.add(startOfDay + (14 * 60 + 50) * 60000 to startOfDay + (14 * 60 + 50) * 60000 + 30000)    // -- ABENDS (Lange, zusammenhängende Nutzung) --    // 19:00 - 21:30 (YouTube / Serie)    events.add(startOfDay + (19 * 60 + 0) * 60000 to startOfDay + (21 * 60 + 30) * 60000)    // 23:00 - 23:15 (Letzter Check vor dem Schlafen)    events.add(startOfDay + (23 * 60 + 0) * 60000 to startOfDay + (23 * 60 + 15) * 60000)    return events}

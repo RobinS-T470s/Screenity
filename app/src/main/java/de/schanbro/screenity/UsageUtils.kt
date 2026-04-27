@@ -6,12 +6,6 @@ import android.app.usage.UsageStatsManager
 import android.content.Context
 import java.util.Calendar
 
-data class ScreenEvent(
-    val timestamp: Long,
-    val type: String, // "SCREEN_ON", "SCREEN_OFF", "APP_OPEN", "APP_CLOSE"
-    val packageName: String? = null
-)
-
 @SuppressLint("ServiceCast")
 fun getDetailedEvents(context: Context): List<ScreenEvent> {
     val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager

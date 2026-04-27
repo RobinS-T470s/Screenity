@@ -175,26 +175,67 @@ fun DeviceDetailScreen(deviceId: String, onBack: () -> Unit) {
                 CircularProgressIndicator()
             }
         } else {
-            val hourlyData = remember(eventsFromToday) { calculateHourlyUsage(eventsFromToday) }
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                item {
-                    //Text(
-                    //    "Nutzung über den Tag",
-                    //    style = MaterialTheme.typography.titleMedium,
-                    //    color = MaterialTheme.colorScheme.primary,
-                    //    modifier = Modifier.padding(vertical = 8.dp)
-                    //)
+            val startOfDay = remember {
+                Calendar.getInstance().apply {
+                    set(Calendar.HOUR_OF_DAY, 0)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }.timeInMillis
+            }
 
+            val timelineEvents = remember(eventsFromToday) {
+                val events = mutableListOf<Pair<Long, Long>>()
+                val rawEvents = eventsFromToday.sortedBy { it.timestamp }
+
+                var lastOnTimestamp: Long? = null
+
+                rawEvents.forEach { ev ->
+                    when (ev.type) {
+                        "SCREEN_ON" -> {
+                            if (lastOnTimestamp == null) lastOnTimestamp = ev.timestamp
+                        }
+                        "SCREEN_OFF" -> {
+                            if (lastOnTimestamp != null) {
+                                events.add(lastOnTimestamp!! to ev.timestamp)
+                                lastOnTimestamp = null
+                            } else {
+                                // Handy war seit Mitternacht an
+                                events.add(startOfDay to ev.timestamp)
+                            }
+                        }
+                    }
+                }
+                // Falls das Gerät aktuell noch an ist
+                if (lastOnTimestamp != null) {
+                    events.add(lastOnTimestamp!! to System.currentTimeMillis())
+                }
+                events.sortBy { it.first }
+                events
+            }
+            // --- ENDE: LOGIK ---
+
+            val hourlyData = remember(eventsFromToday) { calculateHourlyUsage(eventsFromToday) }
+
+            LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp)) {
+
+                // --- 1. Die Timeline als oberstes Element ---
+                if (timelineEvents.isNotEmpty()) {
+                    item {
+                        ActivityTimelineChart(
+                            events = timelineEvents,
+                            modifier = Modifier.padding(bottom = 24.dp)
+                        )
+                    }
+                }
+
+                // --- 2. Das stündliche Liniendiagramm ---
+                item {
                     if (hourlyData.isNotEmpty()) {
                         Card(
                             modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
                         ) {
-                            // Hier wird das Diagramm aus deiner Charts.kt aufgerufen
-                            //ScreenTimeChart(
-                            //    dataPoints = hourlyData,
-                            //    modifier = Modifier.padding(16.dp)
-                            //)
                             HourlyLineChart(
                                 dataPoints = hourlyData,
                                 modifier = Modifier.padding(16.dp)
@@ -205,6 +246,7 @@ fun DeviceDetailScreen(deviceId: String, onBack: () -> Unit) {
                     }
                 }
 
+                // --- 3. App-Nutzungsliste ---
                 item {
                     Text(
                         text = "${stringResource(R.string.todays_app_usage)} ($todayStr):",
@@ -216,26 +258,13 @@ fun DeviceDetailScreen(deviceId: String, onBack: () -> Unit) {
 
                 if (appsFromToday.isEmpty()) {
                     item {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text(
-                                stringResource(R.string.no_history_data),
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
+                        Text(
+                            stringResource(R.string.no_history_data),
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(vertical = 16.dp)
+                        )
                     }
                 } else {
-                    //LazyColumn(
-                    //    modifier = Modifier.fillMaxSize(),
-                    //    contentPadding = PaddingValues(bottom = 24.dp)
-                    //) {
-                    //    items(appsFromToday.sortedByDescending { it.usage_ms }) { app ->
-                    //        AppUsageRow(app)
-                    //        HorizontalDivider(
-                    //            modifier = Modifier.padding(vertical = 4.dp),
-                    //            thickness = 0.5.dp
-                    //        )
-                    //    }
-                    //}
                     items(appsFromToday.sortedByDescending { it.usage_ms }) { app ->
                         AppUsageRow(app)
                         HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp)
