@@ -34,7 +34,8 @@ import java.util.*
 // --- DATENMODELL ---
 data class AppUsageInfo(
     val appName: String,
-    val usageMs: Long
+    val usageMs: Long,
+    val packageName: String
 )
 
 @Composable
@@ -152,10 +153,16 @@ fun AppUsageRow(app: AppUsageInfo) {
 
 // --- SYSTEM LOGIK (PROFI-METHODEN) ---
 
-suspend fun getTodayUsageEvents(context: Context): List<AppUsageInfo> = withContext(Dispatchers.IO) {
+suspend fun getTodayUsageEvents(
+    context: Context,
+    targetPackageName: String? = null // Optionaler Parameter
+): List<AppUsageInfo> = withContext(Dispatchers.IO) {
     val usm = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
     val calendar = Calendar.getInstance().apply {
-        set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
     }
 
     val events = usm.queryEvents(calendar.timeInMillis, System.currentTimeMillis())
@@ -171,20 +178,19 @@ suspend fun getTodayUsageEvents(context: Context): List<AppUsageInfo> = withCont
         events.getNextEvent(event)
         val packageName = event.packageName
 
+        // Performance-Optimierung: Wenn wir ein targetPackage haben,
+        // tracken wir trotzdem alle Events für die Logik (wegen Screen On/Off),
+        // aber wir berechnen die Map am Ende präzise.
+
         when (event.eventType) {
             UsageEvents.Event.MOVE_TO_FOREGROUND -> {
-                // Wenn der Bildschirm gerade erst angegangen ist UND direkt eine NEUE App startet,
-                // löschen wir den Verdacht, dass die alte App weiterlief!
                 if (screenOnTime != null && packageName != lastActivePackageName) {
                     screenOnTime = null
                 }
-
-                // Falls der Verdacht stimmte und die ALTE App weiterlief:
                 if (screenOnTime != null && lastActivePackageName != null) {
-                    openApps[lastActivePackageName] = screenOnTime!!
+                    openApps[lastActivePackageName!!] = screenOnTime!!
                     screenOnTime = null
                 }
-
                 openApps[packageName] = event.timeStamp
                 lastActivePackageName = packageName
             }
@@ -207,30 +213,39 @@ suspend fun getTodayUsageEvents(context: Context): List<AppUsageInfo> = withCont
             }
 
             UsageEvents.Event.SCREEN_INTERACTIVE -> {
-                // Wir merken uns NUR den Zeitpunkt. Wir tragen die App noch nicht als "laufend" ein!
-                // Wir warten ab, was das nächste Event sagt.
                 screenOnTime = event.timeStamp
             }
         }
     }
 
-    // Am Ende der Schleife: Falls der Bildschirm an ging und DANACH kein Event mehr kam,
-    // lief die letzte App tatsächlich weiter.
     if (screenOnTime != null && lastActivePackageName != null) {
-        openApps[lastActivePackageName] = screenOnTime!!
+        openApps[lastActivePackageName!!] = screenOnTime!!
     }
 
-    // Abrechnung bis JETZT
     val now = System.currentTimeMillis()
     openApps.forEach { (pkg, start) ->
         appUsageMap[pkg] = appUsageMap.getOrDefault(pkg, 0L) + (now - start)
     }
 
     val pm = context.packageManager
-    appUsageMap.map { (pkg, ms) ->
-        val name = try { pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString() } catch (e: Exception) { pkg }
-        AppUsageInfo(name, ms)
-    }.sortedByDescending { it.usageMs }
+
+    // Filtern und Mapping
+    appUsageMap.entries
+        .filter { entry ->
+            // Wenn targetPackageName gesetzt ist, nur dieses durchlassen, sonst alle
+            targetPackageName == null || entry.key == targetPackageName
+        }
+        .map { (pkg, ms) ->
+            val name = try {
+                pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
+            } catch (e: Exception) {
+                pkg
+            }
+            // Hier fügen wir den packageName zum AppUsageInfo Objekt hinzu,
+            // falls dein Model das Feld hat (sehr ratsam!)
+            AppUsageInfo(name, ms, pkg)
+        }
+        .sortedByDescending { it.usageMs }
 }
 
 suspend fun getTotalScreenTime(context: Context): Long = withContext(Dispatchers.IO) {

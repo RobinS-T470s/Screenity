@@ -73,6 +73,34 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
+import android.content.Intent
+import android.net.Uri
+import android.os.Process
+import android.provider.Settings
+import android.text.TextUtils
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import android.app.AppOpsManager
+import androidx.compose.material.icons.filled.Block
+import androidx.lifecycle.Lifecycle
 
 sealed class Screen(val route: String) {
     object Today : Screen("today_screen")
@@ -83,6 +111,7 @@ sealed class Screen(val route: String) {
     object Settings : Screen("settings_screen")
     object DeviceDetail : Screen("device_detail/{deviceId}")
     object About : Screen("about_screen")
+    object BlockApps : Screen("block_apps_screen")
 }
 
 class MainActivity : ComponentActivity() {
@@ -146,8 +175,18 @@ class MainActivity : ComponentActivity() {
                         drawerContent = {
                             ModalDrawerSheet {
                                 Text(stringResource(R.string.app_name), modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.headlineMedium)
-                                HorizontalDivider()
+                                //HorizontalDivider()
 
+                                NavigationDrawerItem(
+                                    label = { Text("Block Apps") },
+                                    selected = currentRoute == Screen.BlockApps.route,
+                                    icon = { Icon(Icons.Default.Block, contentDescription = null) },
+                                    onClick = {
+                                        scope.launch { drawerState.close() }
+                                        navController.navigate(Screen.BlockApps.route)
+                                    },
+                                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                                )
                                 NavigationDrawerItem(
                                     label = { Text(stringResource(R.string.about)) },
                                     selected = currentRoute == Screen.About.route,
@@ -306,6 +345,9 @@ class MainActivity : ComponentActivity() {
                                 composable(de.schanbro.screenity.Screen.About.route) {
                                     AboutScreen(onBack = { navController.popBackStack() })
                                 }
+                                composable(de.schanbro.screenity.Screen.BlockApps.route) {
+                                    BlockAppsScreen()
+                                }
                             }
                         }
                     }
@@ -315,41 +357,199 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+// 1. Prüft den Nutzungsdatenzugriff (Screentime)
+fun checkUsageStatsPermission(context: Context): Boolean {
+    val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
+    val mode = appOps.unsafeCheckOpNoThrow(
+        AppOpsManager.OPSTR_GET_USAGE_STATS,
+        Process.myUid(),
+        context.packageName
+    )
+    return mode == AppOpsManager.MODE_ALLOWED
+}
+
+// 2. Prüft die Barrierefreiheit (Sperr-Dienst)
+fun isAccessibilityServiceEnabled(context: Context): Boolean {
+    val expectedComponentName = "${context.packageName}/${AppBlockService::class.java.canonicalName}"
+    val enabledServices = Settings.Secure.getString(
+        context.contentResolver,
+        Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+    )
+    if (enabledServices.isNullOrEmpty()) return false
+
+    val colonSplitter = TextUtils.SimpleStringSplitter(':')
+    colonSplitter.setString(enabledServices)
+    while (colonSplitter.hasNext()) {
+        val componentName = colonSplitter.next()
+        if (componentName.equals(expectedComponentName, ignoreCase = true)) {
+            return true
+        }
+    }
+    return false
+}
 @Composable
-fun SetupScreen(onUrlSaved: (String) -> Unit) {
+fun SetupScreen(
+    context: Context = LocalContext.current,
+    onUrlSaved: (String) -> Unit
+) {
     var urlInput by remember { mutableStateOf("") }
+
+    // States für die UI
+    var hasUsageAccess by remember { mutableStateOf(checkUsageStatsPermission(context)) }
+    var hasAccessibility by remember { mutableStateOf(isAccessibilityServiceEnabled(context)) }
+    var hasOverlay by remember { mutableStateOf(Settings.canDrawOverlays(context)) }
+
+    // Lifecycle Observer: Dies ist der "Magie"-Teil
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            // Sobald der Nutzer die Android-Einstellungen verlässt und zurückkommt:
+            if (event == Lifecycle.Event.ON_RESUME) {
+                hasUsageAccess = checkUsageStatsPermission(context)
+                hasAccessibility = isAccessibilityServiceEnabled(context)
+                hasOverlay = Settings.canDrawOverlays(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .background(MaterialTheme.colorScheme.background) // Hintergrundfarbe für Kontrast
             .padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.Start
     ) {
-        Text(stringResource(R.string.welcome)+"!", style = MaterialTheme.typography.headlineSmall)
-        Text(stringResource(R.string.pls_enter_url))
-
-        Spacer(Modifier.height(16.dp))
-
-        OutlinedTextField(
-            value = urlInput,
-            onValueChange = { urlInput = it },
-            label = { Text(stringResource(R.string.ex_server_url)) },
-            modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text("http://...") }
+        Text(
+            text = stringResource(R.string.welcome) + "!",
+            style = MaterialTheme.typography.displaySmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
         )
         Text(
-            text = stringResource(R.string.pls_enter_url)
+            text = "Konfiguriere Screenity, um dein digitales Wohlbefinden zu steigern.",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(32.dp))
 
+        // SEKTION 1: Server-Konfiguration
+        Text("1. Server-Verbindung", style = MaterialTheme.typography.titleMedium)
+        Spacer(Modifier.height(8.dp))
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(Modifier.padding(16.dp)) {
+                OutlinedTextField(
+                    value = urlInput,
+                    onValueChange = { urlInput = it },
+                    label = { Text("Server URL") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    placeholder = { Text("https://dein-server.de") },
+                    singleLine = true
+                )
+            }
+        }
+
+        Spacer(Modifier.height(24.dp))
+
+        // SEKTION 2: Berechtigungen
+        Text("2. Berechtigungen", style = MaterialTheme.typography.titleMedium)
+        Text("Tippe auf die Kacheln, um die Einstellungen zu öffnen.", style = MaterialTheme.typography.bodySmall)
+
+        Spacer(Modifier.height(12.dp))
+
+        PermissionItem(
+            title = "Nutzungsdaten",
+            description = "Erlaubt die Messung der App-Nutzung.",
+            isGranted = hasUsageAccess,
+            onClick = {
+                context.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+            }
+        )
+
+        PermissionItem(
+            title = "Barrierefreiheit",
+            description = "Ermöglicht das effektive Sperren von Apps.",
+            isGranted = hasAccessibility,
+            onClick = {
+                // Ein kleiner Hinweis per Toast hilft dem Nutzer, den Dienst zu finden
+                android.widget.Toast.makeText(context, "Suche 'Screenity' unter 'Installierte Apps'", android.widget.Toast.LENGTH_LONG).show()
+                context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            }
+        )
+
+        PermissionItem(
+            title = "Über anderen Apps",
+            description = "Wird für den Sperrbildschirm benötigt.",
+            isGranted = hasOverlay,
+            onClick = {
+                val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}"))
+                context.startActivity(intent)
+            }
+        )
+
+        Spacer(Modifier.height(40.dp))
+
+        // START BUTTON
         Button(
             onClick = { if (urlInput.isNotBlank()) onUrlSaved(urlInput) },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = urlInput.startsWith("http") // Kleine Sicherheitssperre
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            // Der Button ist nur aktiv, wenn URL da ist UND die wichtigsten Rechte gewährt wurden
+            enabled = urlInput.startsWith("http") && hasAccessibility && hasUsageAccess,
+            shape = RoundedCornerShape(16.dp)
         ) {
-            Text(stringResource(R.string.connect_and_start))
+            Text("Jetzt starten", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+        }
+
+        if (!(hasAccessibility && hasUsageAccess)) {
+            Text(
+                text = "Bitte erteile erst die nötigen Berechtigungen.",
+                modifier = Modifier.padding(top = 8.dp).align(Alignment.CenterHorizontally),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
+    }
+}
+
+@Composable
+fun PermissionItem(
+    title: String,
+    description: String,
+    isGranted: Boolean,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .clickable { if (!isGranted) onClick() }
+            .background(if (isGranted) Color(0xFFE8F5E9) else MaterialTheme.colorScheme.surface)
+            .border(1.dp, if (isGranted) Color(0xFF4CAF50) else Color.LightGray, RoundedCornerShape(12.dp))
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, fontWeight = FontWeight.Bold)
+            Text(description, style = MaterialTheme.typography.bodySmall)
+        }
+
+        if (isGranted) {
+            Icon(Icons.Default.CheckCircle, contentDescription = "Erteilt", tint = Color(0xFF4CAF50))
+        } else {
+            Icon(Icons.Default.ArrowForward, contentDescription = "Erteilen")
         }
     }
 }
