@@ -3,53 +3,58 @@ package de.schanbro.screenity
 import android.accessibilityservice.AccessibilityService
 import android.content.Context
 import android.content.Intent
+import android.os.Handler
+import android.os.Looper
 import android.view.accessibility.AccessibilityEvent
-import android.widget.Toast
-import android.util.Log
 import kotlinx.coroutines.*
 
 class AppBlockService : AccessibilityService() {
 
     private val serviceScope = CoroutineScope(Dispatchers.Main + Job())
-    private var lastToastTime = 0L
+    private var currentForegroundPackage: String? = null
 
-    override fun onAccessibilityEvent(event: AccessibilityEvent) {
-        // Wir reagieren auf App-Wechsel
-        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-            val packageName = event.packageName?.toString() ?: return
+    // Der Handler ermöglicht zeitgesteuerte Aufgaben
+    private val checkHandler = Handler(Looper.getMainLooper())
 
-            // Eigene App und System-Launcher ignorieren
-            if (packageName == this.packageName || packageName.contains("launcher")) return
-
-            checkAndNotify(packageName)
+    // Das Runnable ist die Aufgabe, die wiederholt wird
+    private val checkRunnable = object : Runnable {
+        override fun run() {
+            currentForegroundPackage?.let { pkg ->
+                checkAndBlock(pkg)
+            }
+            // In 30 Sekunden erneut prüfen (30.000 Millisekunden)
+            checkHandler.postDelayed(this, 30000)
         }
     }
 
-    private fun checkAndNotify(pkg: String) {
+    override fun onAccessibilityEvent(event: AccessibilityEvent) {
+        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+            val packageName = event.packageName?.toString() ?: return
+
+            // Ignoriere System-Apps und den Launcher
+            if (packageName == this.packageName || packageName.contains("launcher")) {
+                currentForegroundPackage = null
+                return
+            }
+
+            currentForegroundPackage = packageName
+
+            // Sofortige Prüfung beim App-Wechsel
+            checkAndBlock(packageName)
+        }
+    }
+
+    private fun checkAndBlock(pkg: String) {
         val prefs = getSharedPreferences("ScreenityPrefs", Context.MODE_PRIVATE)
         val limitMinutes = prefs.getInt("limit_$pkg", 0)
 
+        if (limitMinutes <= 0) return
+
         serviceScope.launch {
-            // Hol die echten Daten von deiner Funktion
             val usageList = getTodayUsageEvents(applicationContext, pkg)
-            val usedMs = usageList.firstOrNull()?.usageMs ?: 0L
-            val usedMinutes = (usedMs / 60000).toInt()
+            val usedMinutes = (usageList.firstOrNull()?.usageMs ?: 0L) / 60000
 
-            // 1. BENACHRICHTIGUNG (Toast) zur Kontrolle
-            // Wir begrenzen Toasts auf alle 3 Sekunden, damit es nicht nervt
-            if (System.currentTimeMillis() - lastToastTime > 3000) {
-                val limitText = if (limitMinutes == 0) "Kein Limit" else "$limitMinutes Min"
-                Toast.makeText(
-                    applicationContext,
-                    "App: $pkg\nHeute: $usedMinutes Min | Limit: $limitText",
-                    Toast.LENGTH_SHORT
-                ).show()
-                lastToastTime = System.currentTimeMillis()
-            }
-
-            // 2. SPERR-LOGIK
-            if (limitMinutes in 1..usedMinutes) {
-                Log.d("Screenity", "SPERRE: $pkg ($usedMinutes >= $limitMinutes)")
+            if (usedMinutes >= limitMinutes) {
                 blockApp()
             }
         }
@@ -63,10 +68,19 @@ class AppBlockService : AccessibilityService() {
         startActivity(startMain)
     }
 
-    override fun onInterrupt() {}
+    override fun onServiceConnected() {
+        super.onServiceConnected()
+        // Starte die regelmäßige Überprüfung, sobald der Dienst verbunden ist
+        checkHandler.post(checkRunnable)
+    }
+
+    override fun onInterrupt() {
+        checkHandler.removeCallbacks(checkRunnable)
+    }
 
     override fun onDestroy() {
         super.onDestroy()
+        checkHandler.removeCallbacks(checkRunnable)
         serviceScope.cancel()
     }
 }
