@@ -14,6 +14,8 @@ If you install Screenity on all your devices (currently just android possible), 
 - Widgets
 - filters
 - admin-page (web)
+- internal und extetnal connection to server
+- optimize and publish server files
 
 # Else
 As you hopefully noticed, the project is very new. It is also my first bigger project, so i'm sorry for the mistakes i'll make :)
