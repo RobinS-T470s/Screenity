@@ -163,14 +163,14 @@ fun TotalAllDevicesCard(totalMs: Long) {
             .fillMaxWidth()
             .padding(bottom = 16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.tertiaryContainer
+            containerColor = MaterialTheme.colorScheme.primaryContainer
         )
     ) {
         Column(Modifier.padding(16.dp)) {
             Text(
                 text = stringResource(R.string.all_time),
                 style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onTertiary
+                color = MaterialTheme.colorScheme.onPrimary
             )
             Text(
                 text = String.format("%02dh %02dm %02ds", h, m, s),
